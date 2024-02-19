@@ -19,10 +19,17 @@ module micro86
   output speaker_p,
   output speaker_m,
   output ioport_0,
+  output ioport_1,
+  output ioport_2,
+  output ioport_3,
+  output ioport_4,
   input  button_reset,
   input  button_halt,
   input  button_program_select,
-  input  button_0
+  input  button_0,
+  output spi_clk_0,
+  output spi_mosi_0,
+  input  spi_miso_0
 );
 
 // iceFUN 8x4 LEDs used for debugging.
@@ -1463,8 +1470,15 @@ memory_bus memory_bus_0(
   .speaker_p    (speaker_p),
   .speaker_m    (speaker_m),
   .ioport_0     (ioport_0),
+  .ioport_1     (ioport_1),
+  .ioport_2     (ioport_2),
+  .ioport_3     (ioport_3),
+  .ioport_4     (ioport_4),
   .button_0     (button_0),
-  .reset        (~button_reset)
+  .reset        (~button_reset),
+  .spi_clk_0    (spi_clk_0),
+  .spi_mosi_0   (spi_mosi_0),
+  .spi_miso_0   (spi_miso_0)
 );
 
 eeprom eeprom_0

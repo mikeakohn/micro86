@@ -6,7 +6,8 @@ SOURCE= \
   src/memory_bus.v \
   src/peripherals.v \
   src/ram.v \
-  src/rom.v
+  src/rom.v \
+  src/spi.v
 
 default:
 	yosys -q -p "synth_ice40 -top $(PROGRAM) -json $(PROGRAM).json" $(SOURCE)

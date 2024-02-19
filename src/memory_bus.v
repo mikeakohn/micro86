@@ -26,8 +26,15 @@ module memory_bus
   output speaker_p,
   output speaker_m,
   output ioport_0,
+  output ioport_1,
+  output ioport_2,
+  output ioport_3,
+  output ioport_4,
   input button_0,
-  input reset
+  input reset,
+  output spi_clk_0,
+  output spi_mosi_0,
+  input  spi_miso_0
 );
 
 wire [7:0] rom_data_out;
@@ -44,8 +51,8 @@ assign peripherals_write_enable = (address[15:14] == 2'b10) && write_enable;
 assign block_ram_write_enable = (address[15:14] == 2'b11) && write_enable;
 
 // FIXME: The RAM probably need an enable also.
-//wire peripherals_enable;
-//assign peripherals_enable = (address[15:14] == 2'b10) && bus_enable;
+wire peripherals_enable;
+assign peripherals_enable = (address[15:14] == 2'b10) && bus_enable;
 
 // Based on the selected bank of memory (address[15:14]) select if
 // memory should read from ram.v, rom.v, peripherals.v or hardcoded 0.
@@ -69,6 +76,7 @@ ram ram_0(
 );
 
 peripherals peripherals_0(
+  .enable       (peripherals_enable),
   .address      (address[5:0]),
   .data_in      (data_in),
   .data_out     (peripherals_data_out),
@@ -78,8 +86,15 @@ peripherals peripherals_0(
   .speaker_p    (speaker_p),
   .speaker_m    (speaker_m),
   .ioport_0     (ioport_0),
+  .ioport_1     (ioport_1),
+  .ioport_2     (ioport_2),
+  .ioport_3     (ioport_3),
+  .ioport_4     (ioport_4),
   .button_0     (button_0),
-  .reset        (reset)
+  .reset        (reset),
+  .spi_clk_0    (spi_clk_0),
+  .spi_mosi_0   (spi_mosi_0),
+  .spi_miso_0   (spi_miso_0),
 );
 
 ram ram_1(

@@ -6,7 +6,7 @@ board being used here is an iceFUN with a Lattice iCE40 HX8K FPGA.
 https://www.mikekohn.net/micro/micro86_x86_fpga.php
 
 This only implements the important instructions, but does include all
-the strange addressing modes. Example instructions:
+the strange addressing modes. Example of some instructions:
 
     mov eax, [ebx+0x4000]
     mov ebx, 0xf1
@@ -26,6 +26,9 @@ the strange addressing modes. Example instructions:
 * 32, 16, 8 bit register access.
 * All the standard ALU and mov instructions with their addressing modes.
 * The push and pop only work with 32 bit registers.
+
+The memory model is 8 bit, so reading and writing 32 bits takes 4 memory
+cycles. Kind of slow, but easier to implement.
 
 Memory Map
 ==========

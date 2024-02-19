@@ -9,6 +9,7 @@
 
 module peripherals
 (
+  input enable,
   input  [5:0] address,
   input  [7:0] data_in,
   output reg [7:0] data_out,
@@ -18,8 +19,15 @@ module peripherals
   output speaker_p,
   output speaker_m,
   output ioport_0,
+  output ioport_1,
+  output ioport_2,
+  output ioport_3,
+  output ioport_4,
   input button_0,
-  input reset
+  input reset,
+  output spi_clk_0,
+  output spi_mosi_0,
+  input  spi_miso_0,
 );
 
 reg [7:0] storage [3:0];
@@ -34,8 +42,21 @@ reg speaker_value_m;
 assign speaker_p = speaker_value_p;
 assign speaker_m = speaker_value_m;
 
-reg [7:0] ioport = 0;
-assign ioport_0 = ioport[0];
+reg [7:0] ioport_a = 0;
+assign ioport_0 = ioport_a[0];
+reg [7:0] ioport_b = 0; // 8'hf0;
+assign ioport_1 = ioport_b[0];
+assign ioport_2 = ioport_b[1];
+assign ioport_3 = ioport_b[2];
+assign ioport_4 = ioport_b[3];
+
+// SPI 0.
+wire [7:0] spi_rx_buffer_0;
+reg  [15:0] spi_tx_buffer_0;
+wire spi_busy_0;
+reg spi_start_0 = 0;
+reg spi_width_16_0 = 0;
+//reg [3:0] spi_divisor_0 = 0;
 
 always @(button_0) begin
   buttons = { 7'b0, ~button_0 };
@@ -59,12 +80,19 @@ always @(posedge raw_clk) begin
   end
 end
 
-always @(posedge clk) begin
+always @(posedge raw_clk) begin
   if (reset) speaker_value_high <= 0;
 
   if (write_enable) begin
     case (address[5:0])
-      8: ioport <= data_in;
+      5'h1: spi_tx_buffer_0 <= data_in;
+      5'h3:
+        begin
+          if (data_in[1] == 1) spi_start_0 <= 1;
+          spi_width_16_0 <= data_in[2];
+          //spi_divisor_0 <= data_in[7:4];
+        end
+      8: ioport_a <= data_in;
       9:
         begin
           case (data_in)
@@ -108,13 +136,37 @@ always @(posedge clk) begin
             default: speaker_value_high <= 0;
           endcase
         end
+      5'ha: ioport_b <= data_in;
     endcase
   end else begin
-    case (address[5:0])
-      0: data_out <= buttons;
-    endcase
+    if (spi_start_0 && spi_busy_0) spi_start_0 <= 0;
+
+    if (enable) begin
+      case (address[5:0])
+        5'h0: data_out <= buttons;
+        5'h1: data_out <= spi_tx_buffer_0;
+        5'h2: data_out <= spi_rx_buffer_0;
+        //5'h3: data_out <= { spi_divisor_0, 1'b0, spi_width_16_0, 1'b0, spi_busy_0 };
+        5'h8: data_out <= ioport_a;
+        5'ha: data_out <= ioport_b;
+      endcase
+    end
   end
 end
+
+spi spi_0
+(
+  .raw_clk  (raw_clk),
+  //.divisor  (spi_divisor_0),
+  .start    (spi_start_0),
+  .width_16 (spi_width_16_0),
+  .data_tx  (spi_tx_buffer_0),
+  .data_rx  (spi_rx_buffer_0),
+  .busy     (spi_busy_0),
+  .sclk     (spi_clk_0),
+  .mosi     (spi_mosi_0),
+  .miso     (spi_miso_0)
+);
 
 endmodule
 
