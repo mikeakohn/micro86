@@ -19,13 +19,12 @@ module ram
   input  [7:0] data_in,
   output reg [7:0] data_out,
   input write_enable,
-  input clk,
-  input double_clk
+  input clk
 );
 
 reg [7:0] storage [4095:0];
 
-always @(posedge double_clk) begin
+always @(posedge clk) begin
   if (write_enable)
     storage[address] <= data_in;
   else

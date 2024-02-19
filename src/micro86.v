@@ -53,7 +53,7 @@ reg [5:0] next_state = 0;
 reg [19:0] clock_div;
 reg [14:0] delay_loop;
 wire clk;
-assign clk = clock_div[7];
+assign clk = clock_div[1];
 
 // Registers.
 // 000 eax
@@ -1466,7 +1466,7 @@ memory_bus memory_bus_0(
   .write_enable (mem_write_enable),
   .clk          (clk),
   .raw_clk      (raw_clk),
-  .double_clk   (clock_div[6]),
+  //.double_clk   (clock_div[6]),
   .speaker_p    (speaker_p),
   .speaker_m    (speaker_m),
   .ioport_0     (ioport_0),

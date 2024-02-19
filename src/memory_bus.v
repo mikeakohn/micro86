@@ -22,7 +22,7 @@ module memory_bus
   input write_enable,
   input clk,
   input raw_clk,
-  input double_clk,
+  //input double_clk,
   output speaker_p,
   output speaker_m,
   output ioport_0,
@@ -71,8 +71,7 @@ ram ram_0(
   .data_in      (data_in),
   .data_out     (ram_data_out),
   .write_enable (ram_write_enable),
-  .clk          (clk),
-  .double_clk   (double_clk)
+  .clk          (raw_clk)
 );
 
 peripherals peripherals_0(
@@ -102,8 +101,7 @@ ram ram_1(
   .data_in      (data_in),
   .data_out     (block_ram_data_out),
   .write_enable (block_ram_write_enable),
-  .clk          (clk),
-  .double_clk   (double_clk)
+  .clk          (raw_clk),
 );
 
 endmodule
