@@ -30,6 +30,38 @@ the strange addressing modes. Example of some instructions:
 The memory model is 8 bit, so reading and writing 32 bits takes 4 memory
 cycles. Kind of slow, but easier to implement.
 
+Implemnted Instructions
+=======================
+
+Here's a list of instructions that are implemented. There are possibly
+others missing here.
+
+    adc
+    add
+    and
+    call
+    cbw
+    cwde
+    cmp
+    dec
+    inc
+    jcc
+    jmp
+    lea
+    mov
+    neg
+    or
+    pop
+    push
+    ret
+    sbb
+    sha
+    shl
+    shr
+    sub
+    xor
+    test
+
 Memory Map
 ==========
 

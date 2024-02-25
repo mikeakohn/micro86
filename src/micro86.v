@@ -456,7 +456,16 @@ end else
                     end
                   2'b01:
                     begin
-                      // NOP (plus some other unsupported stuff).
+                      if (instruction[3:0] == 4'b1000) begin
+                        if (alu_size[1] == 1)
+                          // cbw (sign extend al to ax).
+                          registers[0][15:0] <= { {8{registers[0][7]}}, registers[0][7:0] };
+                        else
+                          // cwde (sign extend ax to eax).
+                          registers[0][31:0] <= { {16{registers[0][15]}}, registers[0][15:0] };
+                      end
+
+                      // nop (plus some other unsupported stuff).
                       state <= STATE_FETCH_OP_0;
                     end
                   2'b10:

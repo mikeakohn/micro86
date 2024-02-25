@@ -1,11 +1,11 @@
-// Ferrati F100-L FPGA Soft Processor
+// micro86 (reduced Intel x86) FPGA Soft Processor
 //  Author: Michael Kohn
 //   Email: mike@mikekohn.net
 //     Web: https://www.mikekohn.net/
 //   Board: iceFUN iCE40 HX8K
 // License: MIT
 //
-// Copyright 2023 by Michael Kohn
+// Copyright 2024 by Michael Kohn
 
 module spi
 (
