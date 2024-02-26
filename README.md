@@ -3,7 +3,7 @@
 This is an implementation of 32 bit Intel x86 in an FPGA. The
 board being used here is an iceFUN with a Lattice iCE40 HX8K FPGA.
 
-https://www.mikekohn.net/micro/micro86_x86_fpga.php
+https://www.mikekohn.net/micro/micro_x86_68000_fpga.php
 
 This only implements the important instructions, but does include all
 the strange addressing modes. Example of some instructions:
