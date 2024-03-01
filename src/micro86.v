@@ -471,6 +471,7 @@ end else
                   2'b10:
                     begin
                       alu_size[0] <= ~instruction[0];
+                      reverse_direction <= 1;
                       ea_has_no_reg <= 1;
                       dst_reg <= 0;
                       mem_count <= 0;
@@ -1143,9 +1144,10 @@ end else
       STATE_JCC_1:
         begin
           if (long_jmp == 0)
-            temp <= rip + $signed(temp[7:0]);
+            temp <= $signed(rip) + $signed(temp[7:0]);
           else
-            temp <= rip + temp;
+            // Narrow temp for 16 bit rip.
+            temp <= $signed(rip) + $signed(temp[15:0]);
 
           state <= STATE_JCC_2;
         end

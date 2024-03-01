@@ -3,14 +3,28 @@ bits 32
 
 org 0x4000
 main:
-  mov ebx, 0x1f1
-  add eax, ebx
-  ;and eax, 0x0ff0f
-  xor eax, ebx
-  nop
-  inc eax
+  call delay
+  call set_led_on
+  call delay
+  call set_led_off
+  jmp main
+
   hlt
 
-loop:
-  ;jmp loop
+set_led_on:
+  mov al, 1
+  mov [0x8008], al
+  ret
+
+set_led_off:
+  mov al, 0
+  mov [0x8008], al
+  ret
+
+delay:
+  mov ebx, 0xffff
+delay_loop:
+  dec ebx
+  jnz delay_loop
+  ret
 
