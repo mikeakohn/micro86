@@ -65,7 +65,7 @@ others missing here.
 Memory Map
 ==========
 
-This implementation of the Intel 8008 has 4 banks of memory.
+This implementation of the Intel x86 has 4 banks of memory.
 
 * Bank 0: RAM (4096 bytes)
 * Bank 1: ROM (4096 bytes loaded from rom.txt)
