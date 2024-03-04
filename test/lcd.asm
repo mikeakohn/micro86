@@ -4,13 +4,13 @@ bits 32
 org 0x4000
 
 ;; Registers.
-BUTTON     equ 0x4000
-SPI_TX     equ 0x4001
-SPI_RX     equ 0x4002
-SPI_CTL    equ 0x4003
-PORT0      equ 0x4008
-SOUND      equ 0x4009
-SPI_IO     equ 0x400a
+BUTTON     equ 0x8000
+SPI_TX     equ 0x8001
+SPI_CTL    equ 0x8003
+SPI_RX     equ 0x8004
+PORT0      equ 0x8008
+SOUND      equ 0x8009
+SPI_IO     equ 0x800a
 
 ;; Bits in SPI_CTL.     
 SPI_BUSY   equ 0x01     
@@ -46,25 +46,26 @@ COMMAND_CONTRASTB       equ 0x82
 COMMAND_CONTRASTC       equ 0x83
 COMMAND_DISPLAY_ON      equ 0xaf
 
-%define send_command(value) \
-  mov al, value; \
+%macro send_command 1
+  mov al, %1
   call lcd_send_cmd
+%endmacro
 
 start:
-  call lcd_init
-  call lcd_clear
 
 main:
+  call lcd_init
+  call lcd_clear
 
 main_while_1:
   call delay
   ;; LED on.
   mov al, 1
-  mov [0x8008], al
+  mov [PORT0], al
   call delay
   ;; LED off.
   mov al, 0
-  mov [0x8008], al
+  mov [PORT0], al
   jmp main_while_1
 
 lcd_init:
@@ -126,9 +127,11 @@ lcd_send_cmd:
   mov bl, LCD_RES
   mov [SPI_IO], bl
   mov [SPI_TX], al
-  mov [SPI_CTL], byte SPI_START
+  mov al, SPI_START
+  mov [SPI_CTL], al
 lcd_send_cmd_wait:
-  test [SPI_CTL], byte SPI_BUSY
+  mov al, [SPI_CTL]
+  test al, SPI_BUSY
   jnz lcd_send_cmd_wait
   mov bl, LCD_CS | LCD_RES
   mov [SPI_IO], bl
@@ -139,9 +142,11 @@ lcd_send_data:
   mov bl, LCD_DC | LCD_RES
   mov [SPI_IO], bl
   mov [SPI_TX], ax
-  mov [SPI_CTL], byte SPI_16 | SPI_START
+  mov al, SPI_16 | SPI_START
+  mov [SPI_CTL], al
 lcd_send_data_wait:
-  test [SPI_CTL], byte SPI_BUSY
+  mov al, [SPI_CTL]
+  test al, SPI_BUSY
   jnz lcd_send_data_wait
   mov bl, LCD_CS | LCD_RES
   mov [SPI_IO], bl
