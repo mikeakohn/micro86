@@ -21,6 +21,10 @@ blink:
 	nasm -o rom.bin test/blink.asm
 	python3 tools/bin2txt.py rom.bin > rom.txt
 
+lcd:
+	nasm -o rom.bin test/lcd.asm
+	python3 tools/bin2txt.py rom.bin > rom.txt
+
 memory:
 	nasm -o rom.bin test/memory_access.asm
 	python3 tools/bin2txt.py rom.bin > rom.txt
