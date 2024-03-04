@@ -46,10 +46,9 @@ COMMAND_CONTRASTB       equ 0x82
 COMMAND_CONTRASTC       equ 0x83
 COMMAND_DISPLAY_ON      equ 0xaf
 
-.macro send_command(value)
-  mov al, value
+%define send_command(value) \
+  mov al, value; \
   call lcd_send_cmd
-.endm
 
 start:
   call lcd_init
@@ -70,10 +69,10 @@ main_while_1:
 
 lcd_init:
   mov bl, LCD_CS
-  mov [SPIO], bl
+  mov [SPI_IO], bl
   call delay
   mov bl, LCD_CS | LCD_RES
-  mov [SPIO], bl
+  mov [SPI_IO], bl
 
   send_command(COMMAND_DISPLAY_OFF)
   send_command(COMMAND_SET_REMAP)
@@ -114,7 +113,6 @@ lcd_init:
   ret
 
 lcd_clear:
-  mov bl, SPI_CTL
   mov edx, 96 * 64
 lcd_clear_loop:
   mov eax, 0x0f0f
@@ -128,9 +126,9 @@ lcd_send_cmd:
   mov bl, LCD_RES
   mov [SPI_IO], bl
   mov [SPI_TX], al
-  mov [SPI_CTL], SPI_START
+  mov [SPI_CTL], byte SPI_START
 lcd_send_cmd_wait:
-  test [SPI_CTL], SPI_BUSY
+  test [SPI_CTL], byte SPI_BUSY
   jnz lcd_send_cmd_wait
   mov bl, LCD_CS | LCD_RES
   mov [SPI_IO], bl
@@ -141,9 +139,9 @@ lcd_send_data:
   mov bl, LCD_DC | LCD_RES
   mov [SPI_IO], bl
   mov [SPI_TX], ax
-  mov [SPI_CTL], SPI_16 | SPI_START
+  mov [SPI_CTL], byte SPI_16 | SPI_START
 lcd_send_data_wait:
-  test [SPI_CTL], SPI_BUSY
+  test [SPI_CTL], byte SPI_BUSY
   jnz lcd_send_data_wait
   mov bl, LCD_CS | LCD_RES
   mov [SPI_IO], bl
