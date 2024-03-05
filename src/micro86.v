@@ -234,7 +234,6 @@ parameter STATE_SHIFT_WB_REG =     46;
 
 parameter STATE_ALU_IMM_TO_MEM_0 = 47;
 parameter STATE_ALU_IMM_TO_MEM_1 = 48;
-//parameter STATE_MOV_IMM_TO_MEM_0 = 49;
 
 parameter STATE_HALTED =           57; // 0x39
 parameter STATE_ERROR =            58; // 0x3a
@@ -1448,23 +1447,15 @@ end else
             default: mem_last <= 3;
           endcase
 
-          //if (do_mov_imm == 0) begin
+          ea <= temp;
+          ea_save <= temp;
+
+          if (do_mov_imm == 0) begin
             next_state <= STATE_ALU_IMM_TO_MEM_1;
             state <= STATE_FETCH_EA_0;
-            ea <= temp;
-            ea_save <= temp;
-/*
           end else begin
-            // FIXME: Need to save ea.
-            ea <= temp + 1;
-//registers[0] <= direction;
-//state <= STATE_ERROR;
-//DEBUG
-            //state <= STATE_ALU_IMM8_1;
             state <= STATE_ALU_IMM_TO_MEM_1;
           end
-*/
-
         end
       STATE_ALU_IMM_TO_MEM_1:
         begin
@@ -1474,12 +1465,6 @@ end else
           state <= STATE_FETCH_DATA32_0;
           next_state <= STATE_ALU_IMM8_1;
         end
-/*
-      STATE_MOV_IMM_TO_MEM_0:
-        begin
-
-        end
-*/
       STATE_HALTED:
         begin
           state <= STATE_HALTED;
