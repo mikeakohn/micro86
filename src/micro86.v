@@ -93,6 +93,7 @@ reg [32:0] result;
 reg [31:0] orig;
 // Since RIP Is only 16 bit, this can be 16 bit too.
 reg [15:0] ea = 0;
+reg [15:0] ea_save;
 wire direction;
 reg reverse_direction;
 wire [1:0] addressing_mode;
@@ -634,7 +635,7 @@ end else
       STATE_ALU_0:
         begin
           // FIXME: ea probably doesn't need to be cleared.
-          ea <= 0;
+          //ea <= 0;
 
           if (instruction[2] == 0) begin
             state <= STATE_FETCH_MOD_RM_0;
@@ -677,6 +678,7 @@ end else
                   next_state <= STATE_COMPUTE_EA_0;
                 end else begin
                   ea <= registers[mod_rm[2:0]];
+                  ea_save <= registers[mod_rm[2:0]];
                   state <= STATE_COMPUTE_EA_1;
                 end
 
@@ -747,6 +749,7 @@ end else
             state <= STATE_FETCH_OP_0;
           end else begin
             mem_count <= 0;
+            ea_save <= ea;
 
             case (opcode_size)
               2'b01: mem_last <= 0;
@@ -896,7 +899,8 @@ end else
         begin
           mem_count <= 0;
           temp <= result;
-          ea <= ea - 4;
+          //ea <= ea - 4;
+          ea <= ea_save;
 
           case (alu_size)
             2'b01:
@@ -1095,6 +1099,7 @@ end else
         begin
           mem_last <= 3;
           ea <= registers[4];
+          //ea_save <= registers[4];
           registers[4] <= registers[4] + 4;
           state <= STATE_FETCH_EA_0;
           next_state <= STATE_POP_1;
@@ -1107,6 +1112,7 @@ end else
       STATE_PUSH_0:
         begin
           ea <= registers[4] - 4;
+          //ea_save <= registers[4] - 4;
           registers[4] <= registers[4] - 4;
           temp <= registers[instruction[2:0]];
           mem_last <= 3;
@@ -1446,6 +1452,7 @@ end else
             next_state <= STATE_ALU_IMM_TO_MEM_1;
             state <= STATE_FETCH_EA_0;
             ea <= temp;
+            ea_save <= temp;
 /*
           end else begin
             // FIXME: Need to save ea.
