@@ -12,15 +12,15 @@ PORT0      equ 0x8008
 SOUND      equ 0x8009
 SPI_IO     equ 0x800a
 
-;; Bits in SPI_CTL.     
-SPI_BUSY   equ 0x01     
-SPI_START  equ 0x02     
-SPI_16     equ 0x04     
+;; Bits in SPI_CTL.
+SPI_BUSY   equ 0x01
+SPI_START  equ 0x02
+SPI_16     equ 0x04
 
 ;; Bits in SPI_IO.
-LCD_RES    equ 0x01     
+LCD_RES    equ 0x01
 LCD_DC     equ 0x02
-LCD_CS     equ 0x04     
+LCD_CS     equ 0x04
 
 ;; Bits in PORT0
 LED0       equ 0x01

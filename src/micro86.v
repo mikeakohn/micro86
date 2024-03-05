@@ -83,6 +83,7 @@ assign sib_index = sib[5:3];
 assign sib_base  = sib[2:0];
 reg long_jmp = 0;
 reg do_lea;
+reg do_mov_imm;
 reg ea_has_no_reg;
 reg do_ea;
 reg no_write_back;
@@ -230,6 +231,10 @@ parameter STATE_SHIFT_1 =          44;
 parameter STATE_SHIFT_2 =          45;
 parameter STATE_SHIFT_WB_REG =     46;
 
+parameter STATE_ALU_IMM_TO_MEM_0 = 47;
+parameter STATE_ALU_IMM_TO_MEM_1 = 48;
+//parameter STATE_MOV_IMM_TO_MEM_0 = 49;
+
 parameter STATE_HALTED =           57; // 0x39
 parameter STATE_ERROR =            58; // 0x3a
 parameter STATE_EEPROM_START =     59;
@@ -337,6 +342,7 @@ always @(posedge clk) begin
           long_jmp <= 0;
           alu_size <= 0;
           do_lea <= 0;
+          do_mov_imm <= 0;
           do_ea <= 0;
           no_write_back <= 0;
           ea_has_no_reg <= 0;
@@ -511,6 +517,16 @@ end else
                     end else if (instruction[3:1] == 3'b001) begin
                       // ret: 0xc3
                       state <= STATE_RET_0;
+                    end else if (instruction[3:1] == 3'b011) begin
+                      // mov [0x0004], 1: 0xc6,0x05,0x04,0x00,0x00,0x00,0x01
+                      do_mov_imm <= 1;
+//DEBUG
+                      reverse_direction <= 1;
+                      alu_size[0] <= ~instruction[0];
+                      mem_count <= 0;
+                      mem_last <= 0;
+                      state <= STATE_FETCH_DATA32_0;
+                      next_state <= STATE_ALU_IMM8_0;
                     end else begin
                       state <= STATE_ERROR;
                     end
@@ -900,9 +916,6 @@ end else
               end
           endcase
 
-//registers[0] <= ea;
-//state <= STATE_HALTED;
-
           if (no_write_back == 0) begin
             state <= STATE_WRITE_EA_0;
             next_state <= STATE_FETCH_OP_0;
@@ -1230,16 +1243,26 @@ end else
         begin
           mod_rm <= temp;
           mem_count <= 0;
-          mem_last <= 0;
-          state <= STATE_FETCH_DATA32_0;
-          next_state <= STATE_ALU_IMM8_1;
+
+          if (temp[7:6] == 2'b11) begin
+            mem_last <= 0;
+            state <= STATE_FETCH_DATA32_0;
+            next_state <= STATE_ALU_IMM8_1;
+          end else begin
+            mem_last <= 3;
+            state <= STATE_FETCH_DATA32_0;
+            next_state <= STATE_ALU_IMM_TO_MEM_0;
+          end
         end
       STATE_ALU_IMM8_1:
         begin
-          // FIXME: It seems nasm isn't setting the mod bits to anything
-          // other than 2'b11.
           dst_reg <= mod_rm[2:0];
-          alu_op  <= mod_rm[5:3];
+
+          if (do_mov_imm == 0)
+            alu_op  <= mod_rm[5:3];
+          else
+            alu_op  <= ALU_MOV;
+
           if (instruction[1] == 1) temp = $signed(temp);
           state <= STATE_ALU_EXECUTE_1;
         end
@@ -1409,6 +1432,47 @@ end else
 
           state <= STATE_FETCH_OP_0;
         end
+      STATE_ALU_IMM_TO_MEM_0:
+        begin
+          do_ea <= 1;
+
+          case (opcode_size)
+            2'b01: mem_last <= 0;
+            2'b10: mem_last <= 1;
+            default: mem_last <= 3;
+          endcase
+
+          //if (do_mov_imm == 0) begin
+            next_state <= STATE_ALU_IMM_TO_MEM_1;
+            state <= STATE_FETCH_EA_0;
+            ea <= temp;
+/*
+          end else begin
+            // FIXME: Need to save ea.
+            ea <= temp + 1;
+//registers[0] <= direction;
+//state <= STATE_ERROR;
+//DEBUG
+            //state <= STATE_ALU_IMM8_1;
+            state <= STATE_ALU_IMM_TO_MEM_1;
+          end
+*/
+
+        end
+      STATE_ALU_IMM_TO_MEM_1:
+        begin
+          dest_value <= temp;
+          mem_count <= 0;
+          mem_last <= 0;
+          state <= STATE_FETCH_DATA32_0;
+          next_state <= STATE_ALU_IMM8_1;
+        end
+/*
+      STATE_MOV_IMM_TO_MEM_0:
+        begin
+
+        end
+*/
       STATE_HALTED:
         begin
           state <= STATE_HALTED;
