@@ -520,7 +520,6 @@ end else
                     end else if (instruction[3:1] == 3'b011) begin
                       // mov [0x0004], 1: 0xc6,0x05,0x04,0x00,0x00,0x00,0x01
                       do_mov_imm <= 1;
-//DEBUG
                       reverse_direction <= 1;
                       alu_size[0] <= ~instruction[0];
                       mem_count <= 0;
@@ -759,14 +758,6 @@ end else
             do_ea <= 1;
             state <= STATE_FETCH_EA_0;
 
-/*
-            case (alu_op)
-              ALU_JMP:   next_state <= STATE_CALL_0;
-              ALU_SHIFT: next_state <= STATE_SHIFT_0;
-              default:   next_state <= STATE_ALU_EXECUTE_0;
-            endcase
-*/
-
             if (alu_op == ALU_JMP)
               next_state <= STATE_CALL_0;
             else
@@ -898,7 +889,6 @@ end else
         begin
           mem_count <= 0;
           temp <= result;
-          //ea <= ea - 4;
           ea <= ea_save;
 
           case (alu_size)
@@ -1249,13 +1239,13 @@ end else
           mod_rm <= temp;
           mem_count <= 0;
 
+          state <= STATE_FETCH_DATA32_0;
+
           if (temp[7:6] == 2'b11) begin
             mem_last <= 0;
-            state <= STATE_FETCH_DATA32_0;
             next_state <= STATE_ALU_IMM8_1;
           end else begin
             mem_last <= 3;
-            state <= STATE_FETCH_DATA32_0;
             next_state <= STATE_ALU_IMM_TO_MEM_0;
           end
         end
@@ -1439,9 +1429,10 @@ end else
         end
       STATE_ALU_IMM_TO_MEM_0:
         begin
+          mem_count <= 0;
           do_ea <= 1;
 
-          case (opcode_size)
+          case (alu_size)
             2'b01: mem_last <= 0;
             2'b10: mem_last <= 1;
             default: mem_last <= 3;
@@ -1454,6 +1445,7 @@ end else
             next_state <= STATE_ALU_IMM_TO_MEM_1;
             state <= STATE_FETCH_EA_0;
           end else begin
+            // A mov instruction doesn't require a fetch.
             state <= STATE_ALU_IMM_TO_MEM_1;
           end
         end
@@ -1461,7 +1453,13 @@ end else
         begin
           dest_value <= temp;
           mem_count <= 0;
-          mem_last <= 0;
+
+          case (alu_size)
+            2'b01: mem_last <= 0;
+            2'b10: mem_last <= 1;
+            default: mem_last <= 3;
+          endcase
+
           state <= STATE_FETCH_DATA32_0;
           next_state <= STATE_ALU_IMM8_1;
         end
