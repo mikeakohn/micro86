@@ -59,13 +59,24 @@ main:
 
 main_while_1:
   call delay
+  ;; Check button.
+  cmp [BUTTON], byte 1
+  je run
   ;; LED on.
   mov al, 1
   mov [PORT0], al
   call delay
+  ;; Check button.
+  cmp [BUTTON], byte 1
+  je run
   ;; LED off.
   mov al, 0
   mov [PORT0], al
+  jmp main_while_1
+
+run:
+  call lcd_clear_2
+  call mandelbrot
   jmp main_while_1
 
 lcd_init:
@@ -120,6 +131,65 @@ lcd_clear_loop:
   call lcd_send_data
   dec edx
   jnz lcd_clear_loop
+  ret
+
+lcd_clear_2:
+  mov edx, 96 * 64
+lcd_clear_loop_2:
+  mov eax, 0xf00f
+  call lcd_send_data
+  dec edx
+  jnz lcd_clear_loop_2
+  ret
+
+multiply:
+  ret
+
+mandelbrot:
+  ;; Store local variables in 0xc000 pointed to by ebp.
+  mov ebp, 0xc000
+
+  ;; 0:  uint16_t x;
+  ;; 2:  uint16_t y;
+  ;; 4:  uint16_t r;
+  ;; 6:  uint16_t i;
+  ;; 8:  uint16_t zr;
+  ;; 10: uint16_t zi;
+  ;; final int DEC_PLACE = 10;
+  ;; final int r0 = (-2 << DEC_PLACE);
+  ;; final int i0 = (-1 << DEC_PLACE);
+  ;; final int r1 = (1 << DEC_PLACE);
+  ;; final int i1 = (1 << DEC_PLACE);
+  ;; final int dx = (r1 - r0) / 96; (0x0020)
+  ;; final int dy = (i1 - i0) / 64; (0x0020)
+
+  ;; for (y = 0; y < 64; y++)
+  mov word [ebp+2], 64
+
+  ;; int i = -1 << 10;
+  mov word [ebp+6], 0xfc00
+mandelbrot_for_y:
+
+  ;; for (x = 0; x < 96; x++)
+  mov word [ebp], 96
+
+  ;; int r = -2 << 10;
+  mov word [ebp+4], 0xf800
+mandelbrot_for_x:
+  ;; zr = r;
+  ;; zi = i;
+  mov ax, [ebp+4]
+  mov bx, [ebp+6]
+  mov [ebp+8], ax
+  mov [ebp+10], bx
+
+
+  sub word [ebp+0], 1
+  jnz mandelbrot_for_x
+
+  sub word [ebp+2], 1
+  jnz mandelbrot_for_y
+
   ret
 
 ;; lcd_send_cmd(al)

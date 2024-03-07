@@ -41,6 +41,10 @@ write_mem:
 	nasm -o rom.bin test/write_mem.asm
 	python3 tools/bin2txt.py rom.bin > rom.txt
 
+memory_access:
+	nasm -o rom.bin test/memory_access.asm
+	python3 tools/bin2txt.py rom.bin > rom.txt
+
 stack:
 	nasm -o rom.bin test/stack.asm
 	python3 tools/bin2txt.py rom.bin > rom.txt

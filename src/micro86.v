@@ -1241,6 +1241,39 @@ end else
 
           state <= STATE_FETCH_DATA32_0;
 
+          case (temp[7:6])
+/*
+            2'b00:
+              begin
+                mem_last <= 3;
+                next_state <= STATE_ALU_IMM_TO_MEM_0;
+              end
+*/
+            2'b01:
+              begin
+                mem_last <= 0;
+                next_state <= STATE_ALU_IMM_TO_MEM_0;
+              end
+/*
+            2'b10:
+              begin
+                mem_last <= 3;
+                next_state <= STATE_ALU_IMM_TO_MEM_0;
+              end
+*/
+            2'b11:
+              begin
+                mem_last <= 0;
+                next_state <= STATE_ALU_IMM8_1;
+              end
+            default:
+              begin
+                mem_last <= 3;
+                next_state <= STATE_ALU_IMM_TO_MEM_0;
+              end
+          endcase
+
+/*
           if (temp[7:6] == 2'b11) begin
             mem_last <= 0;
             next_state <= STATE_ALU_IMM8_1;
@@ -1248,6 +1281,7 @@ end else
             mem_last <= 3;
             next_state <= STATE_ALU_IMM_TO_MEM_0;
           end
+*/
         end
       STATE_ALU_IMM8_1:
         begin
@@ -1438,8 +1472,19 @@ end else
             default: mem_last <= 3;
           endcase
 
-          ea <= temp;
-          ea_save <= temp;
+          case (mod_rm[7:6])
+            2'b00:
+              begin
+                // FIXME: This is missing SIB modes.
+                ea <= temp;
+                ea_save <= temp;
+              end
+            default:
+              begin
+                ea <= registers[mod_rm[2:0]] + temp;
+                ea_save <= registers[mod_rm[2:0]] + temp;
+              end
+          endcase
 
           if (do_mov_imm == 0) begin
             next_state <= STATE_ALU_IMM_TO_MEM_1;
