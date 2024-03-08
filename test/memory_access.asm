@@ -23,9 +23,12 @@ main:
   ;je button_set
   ;hlt
 
-  ;mov ax, 0xffff
-  add bx, 1
-  add ax, 1
+  mov [ebp+0x8],ax
+  mov [ebp+0xa],bx
+
+  ;mov ax, 0xff
+  ;add ax, 1
+  mov ax, 7
 
   ;pushf
   ;pop eax

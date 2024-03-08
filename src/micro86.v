@@ -85,7 +85,7 @@ reg long_jmp = 0;
 reg do_lea;
 reg do_imm;
 reg do_alu_imm;
-reg is_mov;
+reg is_reg_dest;
 reg ea_has_no_reg;
 reg do_ea;
 reg no_write_back;
@@ -344,7 +344,7 @@ always @(posedge clk) begin
           do_lea <= 0;
           do_imm <= 0;
           do_alu_imm <= 0;
-          is_mov <= 0;
+          is_reg_dest <= 0;
           do_ea <= 0;
           no_write_back <= 0;
           ea_has_no_reg <= 0;
@@ -880,7 +880,7 @@ end else
           if (alu_op == ALU_JMP)
             state <= STATE_CALL_0;
           else if (do_imm == 1)
-            if (is_mov == 1)
+            if (is_reg_dest == 1)
               state <= STATE_ALU_WB_REG;
             else
               state <= STATE_ALU_WB_MEM;
@@ -955,7 +955,7 @@ end else
         begin
           mem_count <= 0;
 
-          case (opcode_size)
+          case (alu_size)
             2'b01: mem_last <= 0;
             2'b10: mem_last <= 1;
             default: mem_last <= 3;
@@ -966,7 +966,7 @@ end else
         end
       STATE_MOV_REG_IMM_1:
         begin
-          case (opcode_size)
+          case (alu_size)
             2'b01:
               if (instruction[2] == 0)
                 registers[instruction[1:0]][7:0] <= temp[7:0];
@@ -1477,7 +1477,24 @@ end else
         end
       STATE_ALU_IMM_TO_MEM_0:
         begin
-          dest_value <= temp;
+          if (mod_rm[7:6] == 2'b11) begin
+            is_reg_dest <= 1;
+
+            case (alu_size)
+              2'b01:
+                if (dst_reg[2] == 0)
+                  dest_value <= registers[dst_reg[1:0]][7:0];
+                else
+                  dest_value <= registers[dst_reg[1:0]][15:8];
+              2'b10:
+                dest_value <= registers[dst_reg][15:0];
+              default:
+                dest_value <= registers[dst_reg];
+            endcase
+          end else begin
+            dest_value <= temp;
+          end
+
           mem_count <= 0;
 
           if (do_alu_imm == 1 && instruction[1] == 1)
