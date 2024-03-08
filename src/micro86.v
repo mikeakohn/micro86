@@ -84,6 +84,7 @@ assign sib_base  = sib[2:0];
 reg long_jmp = 0;
 reg do_lea;
 reg do_imm;
+reg do_alu_imm;
 reg is_mov;
 reg ea_has_no_reg;
 reg do_ea;
@@ -97,10 +98,10 @@ reg [15:0] ea = 0;
 reg [15:0] ea_save;
 wire direction;
 reg reverse_direction;
-wire [1:0] addressing_mode;
+//wire [1:0] addressing_mode;
 wire [2:0] inc_reg;
 assign direction = instruction[1] ^ reverse_direction;
-assign addressing_mode = mod_rm[7:6];
+//assign addressing_mode = mod_rm[7:6];
 assign inc_reg = instruction[2:0];
 
 reg  [4:0] shift_count;
@@ -195,8 +196,8 @@ parameter STATE_ALU_EXECUTE_0 =    11;
 parameter STATE_ALU_EXECUTE_1 =    12;
 parameter STATE_ALU_WB_REG     =   13;
 parameter STATE_ALU_WB_MEM     =   14;
-parameter STATE_MOV_IMM_0 =        15;
-parameter STATE_MOV_IMM_1 =        16;
+parameter STATE_MOV_REG_IMM_0 =    15;
+parameter STATE_MOV_REG_IMM_1 =    16;
 parameter STATE_FETCH_MOD_RM_0 =   17;
 parameter STATE_FETCH_MOD_RM_1 =   18;
 parameter STATE_FETCH_SIB_0 =      19;
@@ -224,20 +225,15 @@ parameter STATE_JCC_2 =            37;
 parameter STATE_JMP_0 =            38;
 parameter STATE_JMP_1 =            39;
 
-//parameter STATE_ALU_IMM8_0 =       40;
-//parameter STATE_ALU_IMM8_1 =       41;
-parameter STATE_TST_IMM32_0 =      42;
+parameter STATE_TST_IMM32_0 =      40;
 
-parameter STATE_SHIFT_0 =          43;
-parameter STATE_SHIFT_1 =          44;
-parameter STATE_SHIFT_2 =          45;
-parameter STATE_SHIFT_WB_REG =     46;
+parameter STATE_SHIFT_0 =          41;
+parameter STATE_SHIFT_1 =          42;
+parameter STATE_SHIFT_2 =          43;
+parameter STATE_SHIFT_WB_REG =     44;
 
-//parameter STATE_ALU_IMM_TO_MEM_0 = 47;
-//parameter STATE_ALU_IMM_TO_MEM_1 = 48;
-
-parameter STATE_ALU_IMM_TO_MEM_NEW_0 = 49;
-//parameter STATE_ALU_IMM_TO_MEM_NEW_1 = 50;
+parameter STATE_ALU_IMM_TO_MEM_0 = 45;
+parameter STATE_ALU_IMM_TO_MEM_1 = 46;
 
 parameter STATE_HALTED =           57; // 0x39
 parameter STATE_ERROR =            58; // 0x3a
@@ -347,6 +343,7 @@ always @(posedge clk) begin
           alu_size <= 0;
           do_lea <= 0;
           do_imm <= 0;
+          do_alu_imm <= 0;
           is_mov <= 0;
           do_ea <= 0;
           no_write_back <= 0;
@@ -398,6 +395,7 @@ end else
                        // push edx: 0x52
                        // pop edx: 0x5a
                        if (instruction[3] == 0) begin
+                         temp <= registers[instruction[2:0]];
                          state <= STATE_PUSH_0;
                        end else begin
                          state <= STATE_POP_0;
@@ -439,6 +437,7 @@ end else
                             // add byte [ebx+0x2],0x40: 0x80,0x43,0x02,0x40
                             // ALU [ 1000 00sw ] [ mod alu_op r/m ] [ imm8 ]
                             do_imm <= 1;
+                            do_alu_imm <= 1;
                             alu_size[0] <= ~instruction[0];
                             //mem_count <= 0;
                             //mem_last <= 0;
@@ -478,10 +477,16 @@ end else
                         else
                           // cwde (sign extend ax to eax).
                           registers[0][31:0] <= { {16{registers[0][15]}}, registers[0][15:0] };
+                        state <= STATE_FETCH_OP_0;
+                      end else if (instruction[3:0] == 4'b1100) begin
+                        // pushf
+                        temp <= flags;
+                        mem_count <= 0;
+                        state <= STATE_PUSH_0;
+                      end else begin
+                        // nop (plus some other unsupported stuff).
+                        state <= STATE_FETCH_OP_0;
                       end
-
-                      // nop (plus some other unsupported stuff).
-                      state <= STATE_FETCH_OP_0;
                     end
                   2'b10:
                     begin
@@ -508,7 +513,7 @@ end else
                       // mov eax, 0x400
                       opcode_size[0] <= ~instruction[3];
                       alu_size[0] <= ~instruction[3];
-                      state <= STATE_MOV_IMM_0;
+                      state <= STATE_MOV_REG_IMM_0;
                     end
                   default:
                     state <= STATE_ERROR;
@@ -528,14 +533,11 @@ end else
                       state <= STATE_RET_0;
                     end else if (instruction[3:1] == 3'b011) begin
                       // mov [0x0004], 1: 0xc6,0x05,0x04,0x00,0x00,0x00,0x01
-                      is_mov <= 1;
+                      //is_mov <= 1;
+                      alu_op <= ALU_MOV;
                       do_imm <= 1;
-                      reverse_direction <= 1;
+                      //reverse_direction <= 1;
                       alu_size[0] <= ~instruction[0];
-                      //mem_count <= 0;
-                      //mem_last <= 0;
-                      //next_state <= STATE_ALU_IMM8_0;
-                      //state <= STATE_FETCH_DATA32_0;
                       state <= STATE_FETCH_MOD_RM_0;
                     end else begin
                       state <= STATE_ERROR;
@@ -643,16 +645,17 @@ end else
         end
       STATE_ALU_0:
         begin
-          // FIXME: ea probably doesn't need to be cleared.
-          //ea <= 0;
-
           if (instruction[2] == 0) begin
             state <= STATE_FETCH_MOD_RM_0;
           end else begin
-            //src_reg <= 0;
-            dst_reg <= 0;
+            // 00 ALU 10w
+            // add al, imm8
+            // add ax, imm16
+            // add eax, imm32
 
-            opcode_size[0] <= ~instruction[0];
+            dst_reg <= 0;
+            alu_size[0] <= ~instruction[0];
+            reverse_direction <= 1;
 
             if (opcode_size[1] == 1) begin
               mem_last <= 1;
@@ -671,15 +674,15 @@ end else
         begin
           mem_count <= 0;
 
-          case (addressing_mode)
+          case (mod_rm[7:6])
             2'b00:
               begin
                 // Register indirect.
-                // rm == 100 (esp) == SIB.
-                // rm == 101 (ebp) == displacement only.
                 if (mod_rm[2:0] == 3'b100) begin
+                  // rm == 100 (esp) == SIB.
                   state <= STATE_FETCH_SIB_0;
                 end else if (mod_rm[2:0] == 3'b101) begin
+                  // rm == 101 (ebp) == displacement only.
                   ea_has_no_reg <= 1;
                   mem_count <= 0;
                   mem_last <= 3;
@@ -721,7 +724,7 @@ end else
                       if (mod_rm[5] == 0)
                         temp <= registers[mod_rm[4:3]][7:0];
                       else
-                        temp <= registers[mod_rm[4:4]][15:8];
+                        temp <= registers[mod_rm[4:3]][15:8];
                     end
                   2'b10:
                     begin
@@ -734,7 +737,11 @@ end else
                 endcase
 
                 dst_reg <= mod_rm[2:0];
-                state <= STATE_ALU_EXECUTE_0;
+
+                if (do_imm == 0)
+                  state <= STATE_ALU_EXECUTE_0;
+                else
+                  state <= STATE_ALU_IMM_TO_MEM_0;
               end
           endcase
         end
@@ -743,7 +750,7 @@ end else
           if (ea_has_no_reg) begin
             ea <= temp;
           end else begin
-            if (addressing_mode == 1)
+            if (mod_rm[7:6] == 2'b01)
               ea <= registers[mod_rm[2:0]] + $signed(temp[7:0]);
             else
               ea <= registers[mod_rm[2:0]] + temp;
@@ -766,15 +773,11 @@ end else
               default: mem_last <= 3;
             endcase
 
-            //do_ea <= 1;
-
             if (alu_op == ALU_JMP) begin
               next_state <= STATE_CALL_0;
               state <= STATE_FETCH_EA_0;
             end else if (do_imm == 1) begin
-// HERE FUCK DEBUG
-              //next_state <= STATE_ALU_IMM_TO_MEM_1;
-              next_state <= STATE_ALU_IMM_TO_MEM_NEW_0;
+              next_state <= STATE_ALU_IMM_TO_MEM_0;
               state <= STATE_FETCH_EA_0;
             end else begin
               next_state <= STATE_ALU_EXECUTE_0;
@@ -812,11 +815,19 @@ end else
             endcase
           end
 
+//if (instruction[7:0] == 8'h04) begin
+//if (instruction[7:0] == 8'hc7) begin
+//if (instruction[7:0] == 8'hc0) begin
+//state <= STATE_ERROR;
+//registers[0] <= dest_value;
+//registers[0] <= temp;
+//registers[0] <= ea;
+//registers[0] <= direction;
+//end else
           state <= STATE_ALU_EXECUTE_1;
         end
       STATE_ALU_EXECUTE_1:
         begin
-          //orig <= registers[dst_reg];
           orig <= dest_value;
 
           case (alu_size)
@@ -868,10 +879,11 @@ end else
 
           if (alu_op == ALU_JMP)
             state <= STATE_CALL_0;
-          //else if (do_imm == 1 && mod_rm[7:6] == 2'b11)
           else if (do_imm == 1)
-            state <= STATE_ALU_WB_MEM;
-          //else if (direction == 0 && do_ea == 1)
+            if (is_mov == 1)
+              state <= STATE_ALU_WB_REG;
+            else
+              state <= STATE_ALU_WB_MEM;
           else if (direction == 0)
             state <= STATE_ALU_WB_MEM;
           else
@@ -939,7 +951,7 @@ end else
             state <= STATE_FETCH_OP_0;
           end
         end
-      STATE_MOV_IMM_0:
+      STATE_MOV_REG_IMM_0:
         begin
           mem_count <= 0;
 
@@ -950,9 +962,9 @@ end else
           endcase
 
           state <= STATE_FETCH_DATA32_0;
-          next_state <= STATE_MOV_IMM_1;
+          next_state <= STATE_MOV_REG_IMM_1;
         end
-      STATE_MOV_IMM_1:
+      STATE_MOV_REG_IMM_1:
         begin
           case (opcode_size)
             2'b01:
@@ -1111,7 +1123,6 @@ end else
         begin
           mem_last <= 3;
           ea <= registers[4];
-          //ea_save <= registers[4];
           registers[4] <= registers[4] + 4;
           state <= STATE_FETCH_EA_0;
           next_state <= STATE_POP_1;
@@ -1124,9 +1135,7 @@ end else
       STATE_PUSH_0:
         begin
           ea <= registers[4] - 4;
-          //ea_save <= registers[4] - 4;
           registers[4] <= registers[4] - 4;
-          temp <= registers[instruction[2:0]];
           mem_last <= 3;
           state <= STATE_WRITE_EA_0;
           next_state <= STATE_FETCH_OP_0;
@@ -1466,86 +1475,37 @@ end else
 
           state <= STATE_FETCH_OP_0;
         end
-      STATE_ALU_IMM_TO_MEM_NEW_0:
-        begin
-          dest_value <= temp;
-          mem_count <= 0;
-
-          //ea <= ea_save;
-
-          case (alu_size)
-            2'b01: mem_last <= 0;
-            2'b10: mem_last <= 1;
-            default: mem_last <= 3;
-          endcase
-
-          next_state <= STATE_ALU_EXECUTE_1;
-          //next_state <= STATE_ALU_IMM_TO_MEM_NEW_1;
-          //state <= STATE_FETCH_EA_0;
-          state <= STATE_FETCH_DATA32_0;
-//state <= STATE_ERROR;
-//registers[0] <= temp;
-//registers[0] <= 8'h69;
-        end
-/*
-      STATE_ALU_IMM_TO_MEM_NEW_1:
-        begin
-          //dest_value <= temp;
-//state <= STATE_ERROR;
-registers[0] <= temp;
-//registers[0] <= dest_value;
-//registers[0] <= 8'h69;
-        end
-*/
-/*
       STATE_ALU_IMM_TO_MEM_0:
         begin
-          mem_count <= 0;
-          //do_ea <= 1;
-
-          case (alu_size)
-            2'b01: mem_last <= 0;
-            2'b10: mem_last <= 1;
-            default: mem_last <= 3;
-          endcase
-
-          case (mod_rm[7:6])
-            2'b00:
-              begin
-                // FIXME: This is missing SIB modes.
-                ea <= temp;
-                ea_save <= temp;
-              end
-            default:
-              begin
-                ea <= registers[mod_rm[2:0]] + temp;
-                ea_save <= registers[mod_rm[2:0]] + temp;
-              end
-          endcase
-
-          //if (is_mov == 0) begin
-            next_state <= STATE_ALU_IMM_TO_MEM_1;
-            //state <= STATE_FETCH_EA_0;
-state <= STATE_ERROR;
-registers[0] <= mod_rm[2:0];
-        end
-*/
-/*
-      STATE_ALU_IMM_TO_MEM_1:
-        begin
           dest_value <= temp;
           mem_count <= 0;
 
-          case (alu_size)
-            2'b01: mem_last <= 0;
-            2'b10: mem_last <= 1;
-            default: mem_last <= 3;
-          endcase
+          if (do_alu_imm == 1 && instruction[1] == 1)
+            mem_last <= 0;
+          else
+            case (alu_size)
+              2'b01: mem_last <= 0;
+              2'b10: mem_last <= 1;
+              default: mem_last <= 3;
+            endcase
 
+          if (do_alu_imm == 1) alu_op <= mod_rm[5:3];
+
+          next_state <= STATE_ALU_IMM_TO_MEM_1;
           state <= STATE_FETCH_DATA32_0;
-          next_state <= STATE_ALU_IMM8_1;
         end
-*/
+      STATE_ALU_IMM_TO_MEM_1:
+        begin
+          if (do_alu_imm == 1 && instruction[1] == 1)
+            temp <= $signed(temp[7:0]);
+
+//state <= STATE_ERROR;
+//registers[0] <= direction;
+//registers[0] <= $signed(temp[7:0]);
+//registers[0] <= dest_value;
+//registers[0] <= 8'h69;
+          state <= STATE_ALU_EXECUTE_1;
+        end
       STATE_HALTED:
         begin
           state <= STATE_HALTED;

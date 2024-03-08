@@ -53,6 +53,7 @@ others missing here.
     or
     pop
     push
+    pushf
     ret
     sbb
     sha
