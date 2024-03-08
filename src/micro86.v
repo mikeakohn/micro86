@@ -83,7 +83,8 @@ assign sib_index = sib[5:3];
 assign sib_base  = sib[2:0];
 reg long_jmp = 0;
 reg do_lea;
-reg do_mov_imm;
+reg do_imm;
+reg is_mov;
 reg ea_has_no_reg;
 reg do_ea;
 reg no_write_back;
@@ -223,8 +224,8 @@ parameter STATE_JCC_2 =            37;
 parameter STATE_JMP_0 =            38;
 parameter STATE_JMP_1 =            39;
 
-parameter STATE_ALU_IMM8_0 =       40;
-parameter STATE_ALU_IMM8_1 =       41;
+//parameter STATE_ALU_IMM8_0 =       40;
+//parameter STATE_ALU_IMM8_1 =       41;
 parameter STATE_TST_IMM32_0 =      42;
 
 parameter STATE_SHIFT_0 =          43;
@@ -232,8 +233,11 @@ parameter STATE_SHIFT_1 =          44;
 parameter STATE_SHIFT_2 =          45;
 parameter STATE_SHIFT_WB_REG =     46;
 
-parameter STATE_ALU_IMM_TO_MEM_0 = 47;
-parameter STATE_ALU_IMM_TO_MEM_1 = 48;
+//parameter STATE_ALU_IMM_TO_MEM_0 = 47;
+//parameter STATE_ALU_IMM_TO_MEM_1 = 48;
+
+parameter STATE_ALU_IMM_TO_MEM_NEW_0 = 49;
+//parameter STATE_ALU_IMM_TO_MEM_NEW_1 = 50;
 
 parameter STATE_HALTED =           57; // 0x39
 parameter STATE_ERROR =            58; // 0x3a
@@ -342,7 +346,8 @@ always @(posedge clk) begin
           long_jmp <= 0;
           alu_size <= 0;
           do_lea <= 0;
-          do_mov_imm <= 0;
+          do_imm <= 0;
+          is_mov <= 0;
           do_ea <= 0;
           no_write_back <= 0;
           ea_has_no_reg <= 0;
@@ -430,12 +435,16 @@ end else
                           begin
                             // add eax, 1: 0x83,0xc0,0x01
                             // and eax, 1: 0x83,0xe0,0x01
+                            // add dword [ebx+0x2],0x40: 0x83,0x43,0x02,0x40
+                            // add byte [ebx+0x2],0x40: 0x80,0x43,0x02,0x40
                             // ALU [ 1000 00sw ] [ mod alu_op r/m ] [ imm8 ]
+                            do_imm <= 1;
                             alu_size[0] <= ~instruction[0];
-                            mem_count <= 0;
-                            mem_last <= 0;
-                            state <= STATE_FETCH_DATA32_0;
-                            next_state <= STATE_ALU_IMM8_0;
+                            //mem_count <= 0;
+                            //mem_last <= 0;
+                            //next_state <= STATE_ALU_IMM8_0;
+                            //state <= STATE_FETCH_DATA32_0;
+                            state <= STATE_FETCH_MOD_RM_0;
                           end
                         2'b01:
                           begin
@@ -519,13 +528,15 @@ end else
                       state <= STATE_RET_0;
                     end else if (instruction[3:1] == 3'b011) begin
                       // mov [0x0004], 1: 0xc6,0x05,0x04,0x00,0x00,0x00,0x01
-                      do_mov_imm <= 1;
+                      is_mov <= 1;
+                      do_imm <= 1;
                       reverse_direction <= 1;
                       alu_size[0] <= ~instruction[0];
-                      mem_count <= 0;
-                      mem_last <= 0;
-                      state <= STATE_FETCH_DATA32_0;
-                      next_state <= STATE_ALU_IMM8_0;
+                      //mem_count <= 0;
+                      //mem_last <= 0;
+                      //next_state <= STATE_ALU_IMM8_0;
+                      //state <= STATE_FETCH_DATA32_0;
+                      state <= STATE_FETCH_MOD_RM_0;
                     end else begin
                       state <= STATE_ERROR;
                     end
@@ -755,13 +766,20 @@ end else
               default: mem_last <= 3;
             endcase
 
-            do_ea <= 1;
-            state <= STATE_FETCH_EA_0;
+            //do_ea <= 1;
 
-            if (alu_op == ALU_JMP)
+            if (alu_op == ALU_JMP) begin
               next_state <= STATE_CALL_0;
-            else
+              state <= STATE_FETCH_EA_0;
+            end else if (do_imm == 1) begin
+// HERE FUCK DEBUG
+              //next_state <= STATE_ALU_IMM_TO_MEM_1;
+              next_state <= STATE_ALU_IMM_TO_MEM_NEW_0;
+              state <= STATE_FETCH_EA_0;
+            end else begin
               next_state <= STATE_ALU_EXECUTE_0;
+              state <= STATE_FETCH_EA_0;
+            end
           end
         end
       STATE_ALU_EXECUTE_0:
@@ -798,7 +816,8 @@ end else
         end
       STATE_ALU_EXECUTE_1:
         begin
-          orig <= registers[dst_reg];
+          //orig <= registers[dst_reg];
+          orig <= dest_value;
 
           case (alu_size)
             2'b01:
@@ -849,7 +868,11 @@ end else
 
           if (alu_op == ALU_JMP)
             state <= STATE_CALL_0;
-          else if (direction == 0 && do_ea == 1)
+          //else if (do_imm == 1 && mod_rm[7:6] == 2'b11)
+          else if (do_imm == 1)
+            state <= STATE_ALU_WB_MEM;
+          //else if (direction == 0 && do_ea == 1)
+          else if (direction == 0)
             state <= STATE_ALU_WB_MEM;
           else
             state <= STATE_ALU_WB_REG;
@@ -1234,33 +1257,21 @@ end else
 
           state <= STATE_FETCH_OP_0;
         end
+/*
       STATE_ALU_IMM8_0:
         begin
           mod_rm <= temp;
           mem_count <= 0;
+          do_imm <= 1;
 
           state <= STATE_FETCH_DATA32_0;
 
           case (temp[7:6])
-/*
-            2'b00:
-              begin
-                mem_last <= 3;
-                next_state <= STATE_ALU_IMM_TO_MEM_0;
-              end
-*/
             2'b01:
               begin
                 mem_last <= 0;
                 next_state <= STATE_ALU_IMM_TO_MEM_0;
               end
-/*
-            2'b10:
-              begin
-                mem_last <= 3;
-                next_state <= STATE_ALU_IMM_TO_MEM_0;
-              end
-*/
             2'b11:
               begin
                 mem_last <= 0;
@@ -1273,21 +1284,14 @@ end else
               end
           endcase
 
-/*
-          if (temp[7:6] == 2'b11) begin
-            mem_last <= 0;
-            next_state <= STATE_ALU_IMM8_1;
-          end else begin
-            mem_last <= 3;
-            next_state <= STATE_ALU_IMM_TO_MEM_0;
-          end
-*/
         end
+*/
+/*
       STATE_ALU_IMM8_1:
         begin
           dst_reg <= mod_rm[2:0];
 
-          if (do_mov_imm == 0)
+          if (is_mov == 0)
             alu_op  <= mod_rm[5:3];
           else
             alu_op  <= ALU_MOV;
@@ -1295,6 +1299,7 @@ end else
           if (instruction[1] == 1) temp = $signed(temp);
           state <= STATE_ALU_EXECUTE_1;
         end
+*/
       STATE_TST_IMM32_0:
         begin
           dst_reg <= mod_rm[2:0];
@@ -1461,10 +1466,42 @@ end else
 
           state <= STATE_FETCH_OP_0;
         end
+      STATE_ALU_IMM_TO_MEM_NEW_0:
+        begin
+          dest_value <= temp;
+          mem_count <= 0;
+
+          //ea <= ea_save;
+
+          case (alu_size)
+            2'b01: mem_last <= 0;
+            2'b10: mem_last <= 1;
+            default: mem_last <= 3;
+          endcase
+
+          next_state <= STATE_ALU_EXECUTE_1;
+          //next_state <= STATE_ALU_IMM_TO_MEM_NEW_1;
+          //state <= STATE_FETCH_EA_0;
+          state <= STATE_FETCH_DATA32_0;
+//state <= STATE_ERROR;
+//registers[0] <= temp;
+//registers[0] <= 8'h69;
+        end
+/*
+      STATE_ALU_IMM_TO_MEM_NEW_1:
+        begin
+          //dest_value <= temp;
+//state <= STATE_ERROR;
+registers[0] <= temp;
+//registers[0] <= dest_value;
+//registers[0] <= 8'h69;
+        end
+*/
+/*
       STATE_ALU_IMM_TO_MEM_0:
         begin
           mem_count <= 0;
-          do_ea <= 1;
+          //do_ea <= 1;
 
           case (alu_size)
             2'b01: mem_last <= 0;
@@ -1486,14 +1523,14 @@ end else
               end
           endcase
 
-          if (do_mov_imm == 0) begin
+          //if (is_mov == 0) begin
             next_state <= STATE_ALU_IMM_TO_MEM_1;
-            state <= STATE_FETCH_EA_0;
-          end else begin
-            // A mov instruction doesn't require a fetch.
-            state <= STATE_ALU_IMM_TO_MEM_1;
-          end
+            //state <= STATE_FETCH_EA_0;
+state <= STATE_ERROR;
+registers[0] <= mod_rm[2:0];
         end
+*/
+/*
       STATE_ALU_IMM_TO_MEM_1:
         begin
           dest_value <= temp;
@@ -1508,6 +1545,7 @@ end else
           state <= STATE_FETCH_DATA32_0;
           next_state <= STATE_ALU_IMM8_1;
         end
+*/
       STATE_HALTED:
         begin
           state <= STATE_HALTED;
