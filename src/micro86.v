@@ -534,10 +534,8 @@ end else
                       state <= STATE_RET_0;
                     end else if (instruction[3:1] == 3'b011) begin
                       // mov [0x0004], 1: 0xc6,0x05,0x04,0x00,0x00,0x00,0x01
-                      //is_mov <= 1;
                       alu_op <= ALU_MOV;
                       do_imm <= 1;
-                      //reverse_direction <= 1;
                       alu_size[0] <= ~instruction[0];
                       state <= STATE_FETCH_MOD_RM_0;
                     end else begin
@@ -1267,49 +1265,6 @@ end else
 
           state <= STATE_FETCH_OP_0;
         end
-/*
-      STATE_ALU_IMM8_0:
-        begin
-          mod_rm <= temp;
-          mem_count <= 0;
-          do_imm <= 1;
-
-          state <= STATE_FETCH_DATA32_0;
-
-          case (temp[7:6])
-            2'b01:
-              begin
-                mem_last <= 0;
-                next_state <= STATE_ALU_IMM_TO_MEM_0;
-              end
-            2'b11:
-              begin
-                mem_last <= 0;
-                next_state <= STATE_ALU_IMM8_1;
-              end
-            default:
-              begin
-                mem_last <= 3;
-                next_state <= STATE_ALU_IMM_TO_MEM_0;
-              end
-          endcase
-
-        end
-*/
-/*
-      STATE_ALU_IMM8_1:
-        begin
-          dst_reg <= mod_rm[2:0];
-
-          if (is_mov == 0)
-            alu_op  <= mod_rm[5:3];
-          else
-            alu_op  <= ALU_MOV;
-
-          if (instruction[1] == 1) temp = $signed(temp);
-          state <= STATE_ALU_EXECUTE_1;
-        end
-*/
       STATE_TST_IMM32_0:
         begin
           dst_reg <= mod_rm[2:0];
