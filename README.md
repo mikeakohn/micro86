@@ -43,8 +43,8 @@ others missing here.
     cbw
     cwde
     cmp
-    dec
-    inc
+    dec (reg only, only 16 and 32 bit)
+    inc (reg only, only 16 and 32 bit)
     jcc
     jmp
     lea

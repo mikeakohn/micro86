@@ -23,12 +23,37 @@ main:
   ;je button_set
   ;hlt
 
-  mov [ebp+0x8],ax
-  mov [ebp+0xa],bx
+  ;mov [ebp+0x8],ax
+  ;mov [ebp+0xa],bx
+
+  mov ebp,0xc000
+  mov ebx,0x4000
+  mov ecx, 10
+
+  mov ax, 0
+  mov word [ebp+0x2],0x20
+
+  ;mov ecx, 0x1234
+  ;mov ebx,0xc000
+
+  ;mov word [0xc002], 0x1234
+  ;sub word [0xc002], 1
+  ;sub word [0xc002], 0x1000
+  ;mov eax, [ebx+0xf]
+  ;mov ax, [0x400f]
+
+loop_1:
+  add ax,1 
+  ;sub cx, 128
+  ;sub word [ebp+0x4], 0x1
+  sub word [ebp+0x2], 0x1
+  jnz loop_1
+
+  ;mov ax, cx
 
   ;mov ax, 0xff
   ;add ax, 1
-  mov ax, 7
+  ;mov ax, 7
 
   ;pushf
   ;pop eax

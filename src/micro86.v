@@ -98,10 +98,8 @@ reg [15:0] ea = 0;
 reg [15:0] ea_save;
 wire direction;
 reg reverse_direction;
-//wire [1:0] addressing_mode;
 wire [2:0] inc_reg;
 assign direction = instruction[1] ^ reverse_direction;
-//assign addressing_mode = mod_rm[7:6];
 assign inc_reg = instruction[2:0];
 
 reg  [4:0] shift_count;
@@ -112,7 +110,6 @@ assign shift_op = mod_rm[5:3];
 // bit 0: 8 bit.
 // bit 1: 16 bit.
 // If both are set or both cleared, it's 32 bit.
-reg [1:0] opcode_size;
 reg [1:0] alu_size;
 
 // Flags.
@@ -151,6 +148,7 @@ reg eeprom_strobe = 0;
 wire eeprom_ready;
 
 // Debug.
+//reg [3:0] error_code;
 //reg [7:0] debug_0 = 0;
 //reg [7:0] debug_1 = 0;
 //reg [7:0] debug_2 = 0;
@@ -300,12 +298,13 @@ endtask
 always @(posedge clk) begin
   if (!button_reset)
     state <= STATE_RESET;
-  else if (!button_halt)
+  else if (!button_halt) begin
     state <= STATE_HALTED;
-  else begin
+  end else begin
     case (state)
       STATE_RESET:
         begin
+          //error_code <= 0;
           registers[4] <= 16'h1000;
           flag_zero <= 0;
           flag_carry <= 0;
@@ -338,9 +337,8 @@ always @(posedge clk) begin
       STATE_FETCH_OP_0:
         begin
           result <= 0;
-          opcode_size <= 0;
-          long_jmp <= 0;
           alu_size <= 0;
+          long_jmp <= 0;
           do_lea <= 0;
           do_imm <= 0;
           do_alu_imm <= 0;
@@ -412,6 +410,7 @@ end else
                         mem_address <= rip;
                         state <= STATE_FETCH_OP_1;
                       end else begin
+                        //error_code <= 1;
                         state <= STATE_ERROR;
                       end
                     end
@@ -511,12 +510,14 @@ end else
                   2'b11:
                     begin
                       // mov eax, 0x400
-                      opcode_size[0] <= ~instruction[3];
                       alu_size[0] <= ~instruction[3];
                       state <= STATE_MOV_REG_IMM_0;
                     end
                   default:
-                    state <= STATE_ERROR;
+                    begin
+                      //error_code <= 2;
+                      state <= STATE_ERROR;
+                    end
                 endcase
               end
             2'b11:
@@ -540,6 +541,7 @@ end else
                       alu_size[0] <= ~instruction[0];
                       state <= STATE_FETCH_MOD_RM_0;
                     end else begin
+                      //error_code <= 3;
                       state <= STATE_ERROR;
                     end
                   2'b01:
@@ -567,6 +569,7 @@ end else
                         long_jmp <= 1;
                         state <= STATE_JMP_0;
                       end else begin
+                        //error_code <= 4;
                         state <= STATE_ERROR;
                       end
                     end
@@ -606,7 +609,11 @@ end else
                           alu_op <= ALU_JMP;
                           state <= STATE_FETCH_MOD_RM_0;
                         end
-                      default: state <= STATE_ERROR;
+                      default:
+                        begin
+                          //error_code <= 5;
+                          state <= STATE_ERROR;
+                        end
                     endcase
                   default:
                     case (instruction[3:1])
@@ -615,7 +622,11 @@ end else
                           flag_carry <= instruction[0];
                           state <= STATE_FETCH_OP_0;
                         end
-                      default: state <= STATE_ERROR;
+                      default:
+                        begin
+                          //error_code <= 6;
+                          state <= STATE_ERROR;
+                        end
                     endcase
                 endcase
               end
@@ -657,7 +668,7 @@ end else
             alu_size[0] <= ~instruction[0];
             reverse_direction <= 1;
 
-            if (opcode_size[1] == 1) begin
+            if (alu_size[1] == 1) begin
               mem_last <= 1;
             end else if (instruction[0] == 0) begin
               mem_last <= 0;
@@ -701,7 +712,6 @@ end else
                 // One byte displacement.
                 // add eax, [ebx+80]: 0x03,0x43,0x50
                 mem_last <= 0;
-                opcode_size <= 1;
                 state <= STATE_FETCH_DATA32_0;
                 next_state <= STATE_COMPUTE_EA_0;
                 dst_reg <= mod_rm[5:3];
@@ -767,7 +777,7 @@ end else
             mem_count <= 0;
             ea_save <= ea;
 
-            case (opcode_size)
+            case (alu_size)
               2'b01: mem_last <= 0;
               2'b10: mem_last <= 1;
               default: mem_last <= 3;
@@ -815,15 +825,6 @@ end else
             endcase
           end
 
-//if (instruction[7:0] == 8'h04) begin
-//if (instruction[7:0] == 8'hc7) begin
-//if (instruction[7:0] == 8'hc0) begin
-//state <= STATE_ERROR;
-//registers[0] <= dest_value;
-//registers[0] <= temp;
-//registers[0] <= ea;
-//registers[0] <= direction;
-//end else
           state <= STATE_ALU_EXECUTE_1;
         end
       STATE_ALU_EXECUTE_1:
@@ -932,7 +933,7 @@ end else
                 mem_last <= 0;
                 if (alu_op != ALU_MOV) set_flags8(result[8:0], orig[7:0]);
               end
-            2'b11:
+            2'b10:
               begin
                 mem_last <= 1;
                 if (alu_op != ALU_MOV) set_flags16(result[16:0], orig[15:0]);
@@ -1529,8 +1530,8 @@ end else
         end
       STATE_ERROR:
         begin
+          //registers[0] <= error_code;
           state <= STATE_ERROR;
-          mem_write_enable <= 0;
         end
       STATE_EEPROM_START:
         begin
