@@ -66,6 +66,15 @@ assign clk = clock_div[1];
 // 111 edi  / bh
 reg [31:0] registers [7:0];
 
+parameter REG_EAX = 0;
+parameter REG_ECX = 1;
+parameter REG_EDX = 2;
+parameter REG_EBX = 3;
+parameter REG_ESP = 4;
+parameter REG_EBP = 5;
+parameter REG_ESI = 6;
+parameter REG_EDI = 7;
+
 // Instruction.
 reg [15:0] rip = 0;
 reg [3:0] alu_op;
@@ -305,7 +314,7 @@ always @(posedge clk) begin
       STATE_RESET:
         begin
           //error_code <= 0;
-          registers[4] <= 16'h1000;
+          registers[REG_ESP] <= 16'h1000;
           flag_zero <= 0;
           flag_carry <= 0;
           flag_sign <= 0;
@@ -398,8 +407,6 @@ end else
                        end else begin
                          state <= STATE_POP_0;
                        end
-
-                       mem_count <= 0;
                      end
                   2'b10:
                     begin
@@ -480,7 +487,6 @@ end else
                       end else if (instruction[3:0] == 4'b1100) begin
                         // pushf
                         temp <= flags;
-                        mem_count <= 0;
                         state <= STATE_PUSH_0;
                       end else begin
                         // nop (plus some other unsupported stuff).
@@ -759,9 +765,9 @@ end else
             ea <= temp;
           end else begin
             if (mod_rm[7:6] == 2'b01)
-              ea <= registers[mod_rm[2:0]] + $signed(temp[7:0]);
+              ea <= $signed(registers[mod_rm[2:0]]) + $signed(temp[7:0]);
             else
-              ea <= registers[mod_rm[2:0]] + temp;
+              ea <= $signed(registers[mod_rm[2:0]]) + $signed(temp);
           end
 
           state <= STATE_COMPUTE_EA_1;
@@ -983,7 +989,6 @@ end else
         begin
           mem_bus_enable <= 1;
           mem_address <= rip;
-          mem_write_enable <= 1;
           state <= STATE_FETCH_MOD_RM_1;
         end
       STATE_FETCH_MOD_RM_1:
@@ -1008,7 +1013,6 @@ end else
         begin
           mem_bus_enable <= 1;
           mem_address <= rip;
-          mem_write_enable <= 1;
           state <= STATE_FETCH_SIB_1;
         end
       STATE_FETCH_SIB_1:
@@ -1026,7 +1030,7 @@ end else
           // add eax, [ebx+edx]:   0x03,0x04,0x13 (sib = 00 010 011)
           // add eax, [ebx+edx*4]: 0x03,0x04,0x93 (sib = 10 010 011)
           if (sib_base == 3'b100 && sib_index == 3'b100) begin
-            ea <= registers[4];
+            ea <= registers[REG_ESP];
             state <= STATE_COMPUTE_EA_1;
           end else begin
             ea <= registers[sib_base];
@@ -1042,7 +1046,6 @@ end else
         begin
           mem_bus_enable <= 1;
           mem_address <= rip;
-          mem_write_enable <= 0;
           state <= STATE_FETCH_DATA32_1;
         end
       STATE_FETCH_DATA32_1:
@@ -1068,7 +1071,6 @@ end else
         begin
           mem_bus_enable <= 1;
           mem_address <= ea;
-          mem_write_enable <= 0;
           state <= STATE_FETCH_EA_1;
         end
       STATE_FETCH_EA_1:
@@ -1120,9 +1122,10 @@ end else
         end
       STATE_POP_0:
         begin
+          mem_count <= 0;
           mem_last <= 3;
-          ea <= registers[4];
-          registers[4] <= registers[4] + 4;
+          ea <= registers[REG_ESP];
+          registers[REG_ESP] <= registers[REG_ESP] + 4;
           state <= STATE_FETCH_EA_0;
           next_state <= STATE_POP_1;
         end
@@ -1133,8 +1136,9 @@ end else
         end
       STATE_PUSH_0:
         begin
-          ea <= registers[4] - 4;
-          registers[4] <= registers[4] - 4;
+          ea <= registers[REG_ESP] - 4;
+          registers[REG_ESP] <= registers[REG_ESP] - 4;
+          mem_count <= 0;
           mem_last <= 3;
           state <= STATE_WRITE_EA_0;
           next_state <= STATE_FETCH_OP_0;
@@ -1143,26 +1147,27 @@ end else
         begin
           mem_count <= 0;
           mem_last <= 3;
-          ea <= registers[4];
+          ea <= registers[REG_ESP];
           state <= STATE_FETCH_EA_0;
           next_state <= STATE_RET_1;
         end
       STATE_RET_1:
         begin
+          registers[REG_ESP] <= registers[REG_ESP] + 4;
           rip <= temp;
-          registers[4] <= registers[4] + 4;
           state <= STATE_FETCH_OP_0;
         end
       STATE_CALL_0:
         begin
-          ea <= registers[4] - 4;
-          registers[4] <= registers[4] - 4;
+          ea <= registers[REG_ESP] - 4;
+          registers[REG_ESP] <= registers[REG_ESP] - 4;
           temp <= rip;
           mem_count <= 0;
           mem_last <= 3;
 
           if (instruction[4] == 0)
-            rip <= rip + temp;
+            // call (e8) full displacement.
+            rip <= $signed(rip) + $signed(temp[15:0]);
           else
             rip <= temp;
 
@@ -1474,11 +1479,6 @@ end else
           if (do_alu_imm == 1 && instruction[1] == 1)
             temp <= $signed(temp[7:0]);
 
-//state <= STATE_ERROR;
-//registers[0] <= direction;
-//registers[0] <= $signed(temp[7:0]);
-//registers[0] <= dest_value;
-//registers[0] <= 8'h69;
           state <= STATE_ALU_EXECUTE_1;
         end
       STATE_HALTED:
