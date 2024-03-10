@@ -1284,6 +1284,8 @@ end else
           else
             dest_value <= registers[mod_rm[2:0]];
 
+          dst_reg = mod_rm[2:0];
+
           if (instruction[4] == 0) begin
             mem_count <= 0;
             mem_last <= 0;
@@ -1373,7 +1375,7 @@ end else
                     result[31:0] <=
                       (dest_value[31:0] << shift_count) |
                       (dest_value[31:0] >> (32 - shift_count));
-                    flag_carry <= dest_value[7];
+                    flag_carry <= dest_value[31];
                   end
                 SHIFT_ROR:
                   begin

@@ -143,6 +143,48 @@ lcd_clear_loop_2:
   ret
 
 multiply:
+  mov eax, 0
+multiply_loop:
+  shr esi, 1
+  jnc multiply_skip_add
+  add eax, edi
+multiply_skip_add:
+  shl edi, 1
+  cmp esi, 0
+  jnz multiply_loop
+  ;sar eax, 10
+  and eax, 0xffff
+  ret
+
+multiply_signed:
+  mov ecx, 0
+  test edi, 0x8000
+  jz multiply_signed_edi_plus
+  add ecx, 1
+  neg di
+multiply_signed_edi_plus:
+  test esi, 0x8000
+  jz multiply_signed_esi_plus
+  add ecx, 1
+  neg si
+multiply_signed_esi_plus:
+  and esi, 0xffff
+  and edi, 0xffff
+  mov eax, 0
+multiply_signed_loop:
+  shr esi, 1
+  jnc multiply_signed_skip_add
+  add eax, edi
+multiply_signed_skip_add:
+  shl edi, 1
+  cmp esi, 0
+  jnz multiply_signed_loop
+  ;sar eax, 10
+  and eax, 0xffff
+  cmp ecx, 1
+  jnz multiply_signed_exit
+  neg ax
+multiply_signed_exit:
   ret
 
 mandelbrot:
@@ -189,6 +231,12 @@ mandelbrot_for_x:
 
   sub word [ebp+2], 1
   jnz mandelbrot_for_y
+
+  ;; Test code.
+  ;mov edi, 0xfffe
+  ;mov esi, 4
+  ;call multiply_signed
+  ;hlt
 
   ret
 

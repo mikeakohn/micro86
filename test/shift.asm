@@ -3,8 +3,8 @@ bits 32
 
 org 0x4000
 main:
-  mov eax, 0x06
-  ;sar ax, 4
-  ror al, 4
+  mov esi, 0x0c
+  shr esi, 1
+  mov eax, esi
   hlt
 

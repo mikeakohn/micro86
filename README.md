@@ -63,6 +63,24 @@ others missing here.
     xor
     test
 
+Unsupported addressing modes:
+
+    // lea eax, [ebp+ecx*4]: 0x8d,0x44,0x8d,0x00
+    // lea eax, [ebp+ecx*4+100]: 0x8d,0x44,0x8d,0x64
+    // lea eax, [ebp+ecx*4+128]: 0x8d,0x84,0x8d,0x80,0x00,0x00,0x00
+    // lea eax, [ebx+ecx*4+100]: 0x8d,0x44,0x8b,0x64
+
+Looks like ebp is kind of special due to the weird x86 instruction
+encodings. This would actually be pretty easy to implement, but
+this design is running out of LUTs. Trying to keep it under 4200
+to target a smaller FPGA.
+
+Shifted out bits on the shift instructions also won't correctly
+compute the carry flag if the shift is more than 1 bit. This can
+be corrected later after branching the code for a smaller FPGA.
+
+Shifts also only work on registers.
+
 Memory Map
 ==========
 
