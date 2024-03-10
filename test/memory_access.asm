@@ -3,35 +3,32 @@ bits 32
 
 BUTTON     equ 0x8000
 
+;; Variables
+curr_x equ 0
+curr_y equ 2
+curr_r equ 4
+curr_i equ 6
+zr     equ 8
+zi     equ 10
+count  equ 12
+zr2    equ 14
+zi2    equ 16
+tr     equ 18
+ti     equ 20
+
 org 0x4000
 main:
   ;mov byte [0x000a], 5
   ;mov al, 5
   ;mov [0x000a], al
 
-  ;mov ebp, 8
-  ;add word [ebp+0x2],0x41
-  ;mov al, [0x000a]
+  mov ebx, 0xc000
 
-  ;mov word [ebp+0x2],0xfc00
-  ;mov word [ebp+0x2],0xfc
-  ;mov [ebp+0x2], word 0xfc00
-  ;mov [ebp+0x2], word 0xfc
-  ;mov ax, [0x000a]
-
-  ;cmp [BUTTON], byte 1
-  ;je button_set
-  ;hlt
-
-  ;mov [ebp+0x8],ax
-  ;mov [ebp+0xa],bx
-
-  mov ebp,0xc000
-  mov ebx,0x4000
-  mov ecx, 10
-
-  mov ax, 0
-  mov word [ebp+0x2],0x20
+  mov word [ebx+tr], 1
+  mov word [ebx+ti], 0xaa
+  mov ax, [ebx+ti]
+  sub ax, [ebx+tr]
+  hlt
 
   ;mov ecx, 0x1234
   ;mov ebx,0xc000
