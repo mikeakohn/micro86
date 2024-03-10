@@ -3,6 +3,19 @@ bits 32
 
 org 0x4000
 
+;; Variables
+curr_x equ 0
+curr_y equ 2
+curr_r equ 4
+curr_i equ 6
+zr     equ 8
+zi     equ 10
+count  equ 12
+zr2    equ 14
+zi2    equ 16
+tr     equ 18
+ti     equ 20
+
 ;; Registers.
 BUTTON     equ 0x8000
 SPI_TX     equ 0x8001
@@ -157,15 +170,15 @@ multiply_skip_add:
   ret
 
 multiply_signed:
-  mov ecx, 0
+  mov ebx, 0
   test edi, 0x8000
   jz multiply_signed_edi_plus
-  add ecx, 1
+  add ebx, 1
   neg di
 multiply_signed_edi_plus:
   test esi, 0x8000
   jz multiply_signed_esi_plus
-  add ecx, 1
+  add ebx, 1
   neg si
 multiply_signed_esi_plus:
   and esi, 0xffff
@@ -181,7 +194,7 @@ multiply_signed_skip_add:
   jnz multiply_signed_loop
   ;sar eax, 10
   and eax, 0xffff
-  cmp ecx, 1
+  cmp ebx, 1
   jnz multiply_signed_exit
   neg ax
 multiply_signed_exit:
@@ -206,30 +219,82 @@ mandelbrot:
   ;; final int dy = (i1 - i0) / 64; (0x0020)
 
   ;; for (y = 0; y < 64; y++)
-  mov word [ebp+2], 64
+  mov word [ebp+curr_y], 64
 
   ;; int i = -1 << 10;
-  mov word [ebp+6], 0xfc00
+  mov word [ebp+curr_i], 0xfc00
 mandelbrot_for_y:
 
   ;; for (x = 0; x < 96; x++)
-  mov word [ebp], 96
+  mov word [ebp+curr_x], 96
 
   ;; int r = -2 << 10;
-  mov word [ebp+4], 0xf800
+  mov word [ebp+curr_r], 0xf800
 mandelbrot_for_x:
   ;; zr = r;
   ;; zi = i;
-  mov ax, [ebp+4]
-  mov bx, [ebp+6]
-  mov [ebp+8], ax
-  mov [ebp+10], bx
+  mov ax, [ebp+curr_r]
+  mov bx, [ebp+curr_i]
+  mov [ebp+zr], ax
+  mov [ebp+zi], bx
 
+  ;; for (int count = 0; count < 15; count++)
+  mov ecx, 15
+mandelbrot_for_count:
+  ;; zr2 = (zr * zr) >> DEC_PLACE;
+  mov si, [ebp+zr]
+  mov di, [ebp+zr]
+  call multiply_signed
+  mov [ebp+zr2], ax
 
-  sub word [ebp+0], 1
+  ;; zi2 = (zi * zi) >> DEC_PLACE;
+  mov si, [ebp+zi]
+  mov di, [ebp+zi]
+  call multiply_signed
+  mov [ebp+zi2], ax
+
+  ;; if (zr2 + zi2 > (4 << DEC_PLACE)) { break; }
+  ;; cmp does: 4 - (zr2 + zi2).. if it's negative it's bigger than 4.
+  add ax, [ebp+zr2]
+  cmp ax, 4
+  ja mandelbrot_stop
+
+  ;; tr = zr2 - zi2;
+  mov ax, [ebp+zr2]
+  sub ax, [ebp+zi2]
+  mov [ebp+tr], ax
+
+  ;; ti = ((zr * zi) >> DEC_PLACE) << 1;
+  mov si, [ebp+zr]
+  mov di, [ebp+zi]
+  call multiply_signed
+  mov [ebp+ti], ax
+
+  ;; zr = tr + curr_r;
+  mov ax, [ebp+tr]
+  add ax, [ebp+curr_r]
+  mov [ebp+zr], ax
+
+  ;; zi = ti + curr_i;
+  mov ax, [ebp+ti]
+  add ax, [ebp+curr_i]
+  mov [ebp+zi], ax
+
+  sub ecx, 1
+  jnz mandelbrot_for_count
+mandelbrot_stop:
+
+  mov edx, colors
+  mov eax, [edx+ecx*2]
+
+  call lcd_send_data
+
+  add word [ebp+curr_r], 0x0020
+  sub word [ebp+curr_x], 1
   jnz mandelbrot_for_x
 
-  sub word [ebp+2], 1
+  add word [ebp+curr_i], 0x0020
+  sub word [ebp+curr_y], 1
   jnz mandelbrot_for_y
 
   ;; Test code.
