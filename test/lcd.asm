@@ -170,15 +170,15 @@ multiply_skip_add:
   ret
 
 multiply_signed:
-  mov ebx, 0
+  mov ebp, 0
   test edi, 0x8000
   jz multiply_signed_edi_plus
-  add ebx, 1
+  add ebp, 1
   neg di
 multiply_signed_edi_plus:
   test esi, 0x8000
   jz multiply_signed_esi_plus
-  add ebx, 1
+  add ebp, 1
   neg si
 multiply_signed_esi_plus:
   and esi, 0xffff
@@ -194,15 +194,15 @@ multiply_signed_skip_add:
   jnz multiply_signed_loop
   ;sar eax, 10
   and eax, 0xffff
-  cmp ebx, 1
+  cmp ebp, 1
   jnz multiply_signed_exit
   neg ax
 multiply_signed_exit:
   ret
 
 mandelbrot:
-  ;; Store local variables in 0xc000 pointed to by ebp.
-  mov ebp, 0xc000
+  ;; Store local variables in 0xc000 pointed to by ebx.
+  mov ebx, 0xc000
 
   ;; 0:  uint16_t x;
   ;; 2:  uint16_t y;
@@ -219,82 +219,83 @@ mandelbrot:
   ;; final int dy = (i1 - i0) / 64; (0x0020)
 
   ;; for (y = 0; y < 64; y++)
-  mov word [ebp+curr_y], 64
+  mov word [ebx+curr_y], 64
 
   ;; int i = -1 << 10;
-  mov word [ebp+curr_i], 0xfc00
+  mov word [ebx+curr_i], 0xfc00
 mandelbrot_for_y:
 
   ;; for (x = 0; x < 96; x++)
-  mov word [ebp+curr_x], 96
+  mov word [ebx+curr_x], 96
 
   ;; int r = -2 << 10;
-  mov word [ebp+curr_r], 0xf800
+  mov word [ebx+curr_r], 0xf800
 mandelbrot_for_x:
   ;; zr = r;
   ;; zi = i;
-  mov ax, [ebp+curr_r]
-  mov bx, [ebp+curr_i]
-  mov [ebp+zr], ax
-  mov [ebp+zi], bx
+  mov ax, [ebx+curr_r]
+  mov dx, [ebx+curr_i]
+  mov [ebx+zr], ax
+  mov [ebx+zi], dx
 
   ;; for (int count = 0; count < 15; count++)
   mov ecx, 15
 mandelbrot_for_count:
   ;; zr2 = (zr * zr) >> DEC_PLACE;
-  mov si, [ebp+zr]
-  mov di, [ebp+zr]
+  mov si, [ebx+zr]
+  mov di, [ebx+zr]
   call multiply_signed
-  mov [ebp+zr2], ax
+  mov [ebx+zr2], ax
 
   ;; zi2 = (zi * zi) >> DEC_PLACE;
-  mov si, [ebp+zi]
-  mov di, [ebp+zi]
+  mov si, [ebx+zi]
+  mov di, [ebx+zi]
   call multiply_signed
-  mov [ebp+zi2], ax
+  mov [ebx+zi2], ax
 
   ;; if (zr2 + zi2 > (4 << DEC_PLACE)) { break; }
   ;; cmp does: 4 - (zr2 + zi2).. if it's negative it's bigger than 4.
-  add ax, [ebp+zr2]
+  add ax, [ebx+zr2]
   cmp ax, 4
   ja mandelbrot_stop
 
   ;; tr = zr2 - zi2;
-  mov ax, [ebp+zr2]
-  sub ax, [ebp+zi2]
-  mov [ebp+tr], ax
+  mov ax, [ebx+zr2]
+  sub ax, [ebx+zi2]
+  mov [ebx+tr], ax
 
   ;; ti = ((zr * zi) >> DEC_PLACE) << 1;
-  mov si, [ebp+zr]
-  mov di, [ebp+zi]
+  mov si, [ebx+zr]
+  mov di, [ebx+zi]
   call multiply_signed
-  mov [ebp+ti], ax
+  mov [ebx+ti], ax
 
   ;; zr = tr + curr_r;
-  mov ax, [ebp+tr]
-  add ax, [ebp+curr_r]
-  mov [ebp+zr], ax
+  mov ax, [ebx+tr]
+  add ax, [ebx+curr_r]
+  mov [ebx+zr], ax
 
   ;; zi = ti + curr_i;
-  mov ax, [ebp+ti]
-  add ax, [ebp+curr_i]
-  mov [ebp+zi], ax
+  mov ax, [ebx+ti]
+  add ax, [ebx+curr_i]
+  mov [ebx+zi], ax
 
   sub ecx, 1
   jnz mandelbrot_for_count
 mandelbrot_stop:
 
   mov edx, colors
-  mov eax, [edx+ecx*2]
+  ;mov eax, [edx+ecx*2]
+  mov eax, 0xf000
 
-  call lcd_send_data
+  ;call lcd_send_data
 
-  add word [ebp+curr_r], 0x0020
-  sub word [ebp+curr_x], 1
+  add word [ebx+curr_r], 0x0020
+  sub word [ebx+curr_x], 1
   jnz mandelbrot_for_x
 
-  add word [ebp+curr_i], 0x0020
-  sub word [ebp+curr_y], 1
+  add word [ebx+curr_i], 0x0020
+  sub word [ebx+curr_y], 1
   jnz mandelbrot_for_y
 
   ;; Test code.
@@ -307,32 +308,24 @@ mandelbrot_stop:
 
 ;; lcd_send_cmd(al)
 lcd_send_cmd:
-  mov bl, LCD_RES
-  mov [SPI_IO], bl
+  mov byte [SPI_IO], LCD_RES
   mov [SPI_TX], al
-  mov al, SPI_START
-  mov [SPI_CTL], al
+  mov byte [SPI_CTL], SPI_START
 lcd_send_cmd_wait:
-  mov al, [SPI_CTL]
-  test al, SPI_BUSY
+  test byte [SPI_CTL], SPI_BUSY
   jnz lcd_send_cmd_wait
-  mov bl, LCD_CS | LCD_RES
-  mov [SPI_IO], bl
+  mov byte [SPI_IO], LCD_CS | LCD_RES
   ret
 
 ;; lcd_send_data(ax)
 lcd_send_data:
-  mov bl, LCD_DC | LCD_RES
-  mov [SPI_IO], bl
+  mov byte [SPI_IO], LCD_DC | LCD_RES
   mov [SPI_TX], ax
-  mov al, SPI_16 | SPI_START
-  mov [SPI_CTL], al
+  mov byte [SPI_CTL], SPI_16 | SPI_START
 lcd_send_data_wait:
-  mov al, [SPI_CTL]
-  test al, SPI_BUSY
+  test byte [SPI_CTL], SPI_BUSY
   jnz lcd_send_data_wait
-  mov bl, LCD_CS | LCD_RES
-  mov [SPI_IO], bl
+  mov byte [SPI_IO], LCD_CS | LCD_RES
   ret
 
 delay:
