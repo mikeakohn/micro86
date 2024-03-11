@@ -69,6 +69,10 @@ sign_ext:
 	nasm -o rom.bin test/sign_ext.asm
 	python3 tools/bin2txt.py rom.bin > rom.txt
 
+lea:
+	nasm -o rom.bin test/lea.asm
+	python3 tools/bin2txt.py rom.bin > rom.txt
+
 disasm:
 	ndisasm -b 32 rom.bin
 

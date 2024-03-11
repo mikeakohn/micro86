@@ -211,36 +211,38 @@ parameter STATE_FETCH_SIB_0 =      19;
 parameter STATE_FETCH_SIB_1 =      20;
 parameter STATE_COMPUTE_SIB_EA_0 = 21;
 parameter STATE_COMPUTE_SIB_EA_1 = 22;
+parameter STATE_COMPUTE_SIB_EA_2 = 23;
+parameter STATE_COMPUTE_SIB_EA_3 = 24;
 
-parameter STATE_FETCH_DATA32_0 =   23;
-parameter STATE_FETCH_DATA32_1 =   24;
-parameter STATE_FETCH_EA_0 =       25;
-parameter STATE_FETCH_EA_1 =       26;
-parameter STATE_WRITE_EA_0 =       27;
-parameter STATE_WRITE_EA_1 =       28;
+parameter STATE_FETCH_DATA32_0 =   25;
+parameter STATE_FETCH_DATA32_1 =   26;
+parameter STATE_FETCH_EA_0 =       27;
+parameter STATE_FETCH_EA_1 =       28;
+parameter STATE_WRITE_EA_0 =       29;
+parameter STATE_WRITE_EA_1 =       30;
 
-parameter STATE_POP_0 =            29;
-parameter STATE_POP_1 =            30;
-parameter STATE_PUSH_0 =           31;
-parameter STATE_RET_0 =            32;
-parameter STATE_RET_1 =            33;
+parameter STATE_POP_0 =            31;
+parameter STATE_POP_1 =            32;
+parameter STATE_PUSH_0 =           33;
+parameter STATE_RET_0 =            34;
+parameter STATE_RET_1 =            35;
 
-parameter STATE_CALL_0 =           34;
-parameter STATE_JCC_0 =            35;
-parameter STATE_JCC_1 =            36;
-parameter STATE_JCC_2 =            37;
-parameter STATE_JMP_0 =            38;
-parameter STATE_JMP_1 =            39;
+parameter STATE_CALL_0 =           36;
+parameter STATE_JCC_0 =            37;
+parameter STATE_JCC_1 =            38;
+parameter STATE_JCC_2 =            39;
+parameter STATE_JMP_0 =            40;
+parameter STATE_JMP_1 =            41;
 
-parameter STATE_TST_IMM32_0 =      40;
+parameter STATE_TST_IMM32_0 =      42;
 
-parameter STATE_SHIFT_0 =          41;
-parameter STATE_SHIFT_1 =          42;
-parameter STATE_SHIFT_2 =          43;
-parameter STATE_SHIFT_WB_REG =     44;
+parameter STATE_SHIFT_0 =          43;
+parameter STATE_SHIFT_1 =          44;
+parameter STATE_SHIFT_2 =          45;
+parameter STATE_SHIFT_WB_REG =     46;
 
-parameter STATE_ALU_IMM_TO_MEM_0 = 45;
-parameter STATE_ALU_IMM_TO_MEM_1 = 46;
+parameter STATE_ALU_IMM_TO_MEM_0 = 47;
+parameter STATE_ALU_IMM_TO_MEM_1 = 48;
 
 parameter STATE_HALTED =           57; // 0x39
 parameter STATE_ERROR =            58; // 0x3a
@@ -714,20 +716,36 @@ end else
             2'b01:
               begin
                 // One byte displacement.
-                // add eax, [ebx+80]: 0x03,0x43,0x50
+                // add eax, [ebx+80]:    0x03,0x43,0x50
+                // TODO:
+                // add eax, [esp+5]:     0x03,0x44,0x24,0x05
+                // add eax, [edx+ecx+5]: 0x03,0x44,0x0a,0x05
                 mem_last <= 0;
-                state <= STATE_FETCH_DATA32_0;
                 next_state <= STATE_COMPUTE_EA_0;
                 dst_reg <= mod_rm[5:3];
+
+                // rm == 100 (esp) == SIB.
+                if (mod_rm[5:3] == 3'b100)
+                  state <= STATE_FETCH_SIB_0;
+                else
+                  state <= STATE_FETCH_DATA32_0;
               end
             2'b10:
               begin
                 // Four byte displacement.
-                // add eax, [ebx+1024]: 0x03,0x83,0x00,0x04,0x00,0x00
+                // add eax, [ebx+1024]:    0x03,0x83,0x00,0x04,0x00,0x00
+                // TODO:
+                // add eax, [esp+128]:     0x03,0x84,0x24,0x80,0x00,0x00,0x00
+                // add eax, [edx+ecx+128]: 0x03,0x84,0x0a,0x80,0x00,0x00,0x00
                 mem_last <= 3;
-                state <= STATE_FETCH_DATA32_0;
                 next_state <= STATE_COMPUTE_EA_0;
                 dst_reg <= mod_rm[5:3];
+
+                // rm == 100 (esp) == SIB.
+                if (mod_rm[5:3] == 3'b100)
+                  state <= STATE_FETCH_SIB_0;
+                else
+                  state <= STATE_FETCH_DATA32_0;
               end
             2'b11:
               begin
@@ -1029,17 +1047,45 @@ end else
           // add eax, [ebp]:       0x03,0x45,0x00 (sib = none, this is index)
           // add eax, [ebx+edx]:   0x03,0x04,0x13 (sib = 00 010 011)
           // add eax, [ebx+edx*4]: 0x03,0x04,0x93 (sib = 10 010 011)
-          if (sib_base == 3'b100 && sib_index == 3'b100) begin
-            ea <= registers[REG_ESP];
+          // rm = 01 000 100
+          // add eax, [esp+5]:     0x03,0x44,0x24,0x05
+          // rm = 10 000 100
+          // add eax, [esp+128]:   0x03,0x84,0x24,0x80,0x00,0x00,0x00
+          ea <= registers[sib_base];
+
+          if (mod_rm[7:6] == 0 && sib[5:0] == 6'b100100)
             state <= STATE_COMPUTE_EA_1;
-          end else begin
-            ea <= registers[sib_base];
+          else
             state <= STATE_COMPUTE_SIB_EA_1;
-          end
         end
       STATE_COMPUTE_SIB_EA_1:
         begin
-          ea <= ea + (registers[sib_index] << sib_scale);
+          if (sib[5:0] != 6'b100100)
+            ea <= ea + (registers[sib_index] << sib_scale);
+
+          mem_count <= 0;
+
+          case (mod_rm[7:6])
+            2'b00:
+              begin
+                state <= STATE_COMPUTE_EA_1;
+              end
+            default:
+              begin
+                mem_last <= mod_rm[7:6] == 1 ? 1 : 3;
+                next_state = STATE_COMPUTE_SIB_EA_2;
+                state = STATE_FETCH_DATA32_0;
+              end
+          endcase
+        end
+      STATE_COMPUTE_SIB_EA_2:
+        begin
+          ea <= $signed(ea) + $signed(temp[0:7]);
+          state <= STATE_COMPUTE_EA_1;
+        end
+      STATE_COMPUTE_SIB_EA_3:
+        begin
+          ea <= $signed(ea) + $signed(temp[15:0]);
           state <= STATE_COMPUTE_EA_1;
         end
       STATE_FETCH_DATA32_0:
