@@ -701,7 +701,6 @@ end else
                 end else if (mod_rm[2:0] == 3'b101) begin
                   // rm == 101 (ebp) == displacement only.
                   ea_has_no_reg <= 1;
-                  mem_count <= 0;
                   mem_last <= 3;
                   state <= STATE_FETCH_DATA32_0;
                   next_state <= STATE_COMPUTE_EA_0;
@@ -725,7 +724,7 @@ end else
                 dst_reg <= mod_rm[5:3];
 
                 // rm == 100 (esp) == SIB.
-                if (mod_rm[5:3] == 3'b100)
+                if (mod_rm[2:0] == 3'b100)
                   state <= STATE_FETCH_SIB_0;
                 else
                   state <= STATE_FETCH_DATA32_0;
@@ -742,7 +741,7 @@ end else
                 dst_reg <= mod_rm[5:3];
 
                 // rm == 100 (esp) == SIB.
-                if (mod_rm[5:3] == 3'b100)
+                if (mod_rm[2:0] == 3'b100)
                   state <= STATE_FETCH_SIB_0;
                 else
                   state <= STATE_FETCH_DATA32_0;

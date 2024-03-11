@@ -63,7 +63,7 @@ others missing here.
     xor
     test
 
-Unsupported addressing modes:
+Unsupported addressing modes (This should work now, haven't tested fully):
 
     // lea eax, [ebp+ecx*4]: 0x8d,0x44,0x8d,0x00
     // lea eax, [ebp+ecx*4+100]: 0x8d,0x44,0x8d,0x64
