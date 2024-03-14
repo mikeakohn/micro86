@@ -806,14 +806,16 @@ end else
 
             if (alu_op == ALU_JMP) begin
               next_state <= STATE_CALL_0;
-              state <= STATE_FETCH_EA_0;
+              //state <= STATE_FETCH_EA_0;
             end else if (do_imm == 1) begin
               next_state <= STATE_ALU_IMM_TO_MEM_0;
-              state <= STATE_FETCH_EA_0;
+              //state <= STATE_FETCH_EA_0;
             end else begin
               next_state <= STATE_ALU_EXECUTE_0;
-              state <= STATE_FETCH_EA_0;
+              //state <= STATE_FETCH_EA_0;
             end
+
+            state <= STATE_FETCH_EA_0;
           end
         end
       STATE_ALU_EXECUTE_0:
@@ -1071,8 +1073,16 @@ end else
               end
             default:
               begin
-                mem_last <= mod_rm[7:6] == 1 ? 1 : 3;
-                next_state = STATE_COMPUTE_SIB_EA_2;
+                if (mod_rm[7:6] == 1) begin
+                  // 8 bit offset.
+                  mem_last <= 1;
+                  next_state = STATE_COMPUTE_SIB_EA_2;
+                end else begin
+                  // 32 bit offset.
+                  mem_last <= 3;
+                  next_state = STATE_COMPUTE_SIB_EA_3;
+                end
+
                 state = STATE_FETCH_DATA32_0;
               end
           endcase
