@@ -91,6 +91,7 @@ assign sib_scale = sib[7:6];
 assign sib_index = sib[5:3];
 assign sib_base  = sib[2:0];
 reg long_jmp = 0;
+reg is_call;
 reg do_lea;
 reg do_imm;
 reg do_alu_imm;
@@ -352,6 +353,7 @@ always @(posedge clk) begin
           alu_size <= 0;
           alu_reverse_sign <= 0;
           long_jmp <= 0;
+          is_call <= 0;
           do_lea <= 0;
           do_imm <= 0;
           do_alu_imm <= 0;
@@ -567,6 +569,7 @@ end else
                         mem_count <= 0;
                         mem_last <= 3;
                         dst_reg <= 3'b011;
+                        is_call <= 1;
                         state <= STATE_FETCH_DATA32_0;
                         next_state <= STATE_CALL_0;
                       end else if (instruction[3:0] == 4'b1011) begin
@@ -615,6 +618,7 @@ end else
                         begin
                           // call eax: 0xff 0xd0 (MOD_RM)
                           alu_op <= ALU_JMP;
+                          is_call <= 1;
                           state <= STATE_FETCH_MOD_RM_0;
                         end
                       default:
@@ -1214,11 +1218,6 @@ end else
         end
       STATE_CALL_0:
         begin
-          ea <= registers[REG_ESP] - 4;
-          temp <= rip;
-          mem_count <= 0;
-          mem_last <= 3;
-
           if (instruction[4] == 0)
             // call (1110 1000 : full displacement)
             rip <= $signed(rip) + $signed(temp[15:0]);
@@ -1226,14 +1225,13 @@ end else
             // call (1111 1111 : 11 010 reg) <- register indirect.
             rip <= temp;
 
-          if (dst_reg == 3'b100) begin
+          //if (dst_reg == 3'b100) begin
             // jmp register indirect (1111 1111 : 11 100 reg)
+          if (is_call == 0) begin
             state <= STATE_FETCH_OP_0;
           end else begin
-            // Push esp to the stack.
-            registers[REG_ESP] <= registers[REG_ESP] - 4;
-            state <= STATE_WRITE_EA_0;
-            next_state <= STATE_FETCH_OP_0;
+            temp <= rip;
+            state <= STATE_PUSH_0;
           end
         end
       STATE_JCC_0:
