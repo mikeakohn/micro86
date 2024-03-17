@@ -537,8 +537,8 @@ end else
                     if (instruction[3:1] == 3'b000) begin
                       // shl eax, 5: 0xc1,0xe0,0x05
                       alu_op <= ALU_SHIFT;
-                      state <= STATE_FETCH_MOD_RM_0;
                       alu_size[0] <= ~instruction[0];
+                      state <= STATE_FETCH_MOD_RM_0;
                     end else if (instruction[3:1] == 3'b001) begin
                       // ret: 0xc3
                       state <= STATE_RET_0;
@@ -557,8 +557,8 @@ end else
                       // shl eax, 1:  0xd1,0xe0
                       // shl eax, cl: 0xd3,0xe0
                       alu_op <= ALU_SHIFT;
-                      state <= STATE_FETCH_MOD_RM_0;
                       alu_size[0] <= ~instruction[0];
+                      state <= STATE_FETCH_MOD_RM_0;
                     end
                   2'b10:
                     begin
@@ -1215,20 +1215,23 @@ end else
       STATE_CALL_0:
         begin
           ea <= registers[REG_ESP] - 4;
-          registers[REG_ESP] <= registers[REG_ESP] - 4;
           temp <= rip;
           mem_count <= 0;
           mem_last <= 3;
 
           if (instruction[4] == 0)
-            // call (e8) full displacement.
+            // call (1110 1000 : full displacement)
             rip <= $signed(rip) + $signed(temp[15:0]);
           else
+            // call (1111 1111 : 11 010 reg) <- register indirect.
             rip <= temp;
 
           if (dst_reg == 3'b100) begin
+            // jmp register indirect (1111 1111 : 11 100 reg)
             state <= STATE_FETCH_OP_0;
           end else begin
+            // Push esp to the stack.
+            registers[REG_ESP] <= registers[REG_ESP] - 4;
             state <= STATE_WRITE_EA_0;
             next_state <= STATE_FETCH_OP_0;
           end
