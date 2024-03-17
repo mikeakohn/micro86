@@ -257,7 +257,7 @@ mandelbrot_for_count:
   ;; if (zr2 + zi2 > (4 << DEC_PLACE)) { break; }
   ;; cmp does: 4 - (zr2 + zi2).. if it's negative it's bigger than 4.
   add ax, [ebx+zr2]
-  cmp ax, 4
+  cmp ax, 4 << 10
   ja mandelbrot_stop
 
   ;; tr = zr2 - zi2;
@@ -268,7 +268,7 @@ mandelbrot_for_count:
   ;; ti = ((zr * zi * 2);
   mov si, [ebx+zr]
   mov di, [ebx+zi]
-  ;call multiply_signed
+  call multiply_signed
   sal ax, 1
   mov [ebx+ti], ax
 
