@@ -120,6 +120,7 @@ assign shift_op = mod_rm[5:3];
 // bit 1: 16 bit.
 // If both are set or both cleared, it's 32 bit.
 reg [1:0] alu_size;
+reg alu_reverse_sign;
 
 // Flags.
 wire [15:0] flags;
@@ -272,37 +273,37 @@ parameter SHIFT_SHL = 4;
 parameter SHIFT_SHR = 5;
 parameter SHIFT_SAR = 7;
 
-task set_flags16_nocf(input [16:0] data, input [15:0] old);
-  flag_overflow <= data[16] ^ old[15];
-  flag_zero <= data[15:0] == 0;
-  flag_sign <= data[15];
+task set_flags16_nocf(input [16:0] value, input [15:0] old, input [15:0] src, input alu_reverse_sign);
+  flag_overflow <= old[7] == (src[7] ^ alu_reverse_sign) && value[7] != old[7];
+  flag_zero <= value[15:0] == 0;
+  flag_sign <= value[15];
 endtask
 
-task set_flags32_nocf(input [32:0] data, input [31:0] old);
-  flag_overflow <= data[32] ^ old[31];
-  flag_zero <= data[31:0] == 0;
-  flag_sign <= data[32];
+task set_flags32_nocf(input [32:0] value, input [31:0] old, input [31:0] src, input alu_reverse_sign);
+  flag_overflow <= old[31] == (src[31] ^ alu_reverse_sign) && value[31] != old[31];
+  flag_zero <= value[31:0] == 0;
+  flag_sign <= value[32];
 endtask
 
-task set_flags8(input [8:0] data, input [7:0] old);
-  flag_overflow <= data[8] ^ old[7];
-  flag_zero <= data[7:0] == 0;
-  flag_sign <= data[7];
-  flag_carry <= data[8];
+task set_flags8(input [8:0] value, input [7:0] old, input [7:0] src, input alu_reverse_sign);
+  flag_overflow <= old[7] == (src[7] ^ alu_reverse_sign) && value[7] != old[7];
+  flag_zero <= value[7:0] == 0;
+  flag_sign <= value[7];
+  flag_carry <= value[8];
 endtask
 
-task set_flags16(input [16:0] data, input [15:0] old);
-  flag_overflow <= data[16] ^ old[15];
-  flag_zero <= data[15:0] == 0;
-  flag_sign <= data[15];
-  flag_carry <= data[16];
+task set_flags16(input [16:0] value, input [15:0] old, input [15:0] src, input alu_reverse_sign);
+  flag_overflow <= old[15] == (src[15] ^ alu_reverse_sign) && value[15] != old[15];
+  flag_zero <= value[15:0] == 0;
+  flag_sign <= value[15];
+  flag_carry <= value[16];
 endtask
 
-task set_flags32(input [32:0] data, input [31:0] old);
-  flag_overflow <= data[32] ^ old[31];
-  flag_zero <= data[31:0] == 0;
-  flag_sign <= data[31];
-  flag_carry <= data[32];
+task set_flags32(input [32:0] value, input [31:0] old, input [31:0] src, input alu_reverse_sign);
+  flag_overflow <= old[31] == (src[31] ^ alu_reverse_sign) && value[31] != old[31];
+  flag_zero <= value[31:0] == 0;
+  flag_sign <= value[31];
+  flag_carry <= value[32];
 endtask
 
 // This block is the main CPU instruction execute state machine.
@@ -349,6 +350,7 @@ always @(posedge clk) begin
         begin
           result <= 0;
           alu_size <= 0;
+          alu_reverse_sign <= 0;
           long_jmp <= 0;
           do_lea <= 0;
           do_imm <= 0;
@@ -652,10 +654,10 @@ end else
         begin
           if (alu_size[1] == 0) begin
             registers[inc_reg] <= result;
-            set_flags16_nocf(result, orig);
+            set_flags32_nocf(result, orig, registers[inc_reg], 1);
           end else begin
             registers[inc_reg][15:0] <= result[15:0];
-            set_flags32_nocf(result, orig);
+            set_flags16_nocf(result, orig, registers[inc_reg], 0);
           end
 
           state <= STATE_FETCH_OP_0;
@@ -899,6 +901,7 @@ end else
               endcase
           endcase
 
+          if (alu_op == ALU_CMP || alu_op == ALU_SUB) alu_reverse_sign <= 1;
           if (alu_op == ALU_CMP) no_write_back <= 1;
 
           if (alu_op == ALU_JMP)
@@ -925,7 +928,7 @@ end else
                     registers[dst_reg[1:0]][15:8] <= result[7:0];
                 end
 
-                if (alu_op != ALU_MOV) set_flags8(result[8:0], orig[7:0]);
+                if (alu_op != ALU_MOV) set_flags8(result[8:0], orig[7:0], temp[7:0], alu_reverse_sign);
               end
             2'b10:
               begin
@@ -933,12 +936,12 @@ end else
                   registers[dst_reg][15:0] <= result[15:0];
 
                 if (alu_op != ALU_MOV == 0)
-                  set_flags16(result[16:0], orig[15:0]);
+                  set_flags16(result[16:0], orig[15:0], temp[15:0], alu_reverse_sign);
               end
             default:
               begin
                 if (no_write_back == 0) registers[dst_reg] <= result;
-                if (alu_op != ALU_MOV) set_flags32(result, orig);
+                if (alu_op != ALU_MOV) set_flags32(result, orig, temp, alu_reverse_sign);
               end
           endcase
 
@@ -954,17 +957,17 @@ end else
             2'b01:
               begin
                 mem_last <= 0;
-                if (alu_op != ALU_MOV) set_flags8(result[8:0], orig[7:0]);
+                if (alu_op != ALU_MOV) set_flags8(result[8:0], orig[7:0], temp[7:0], alu_reverse_sign);
               end
             2'b10:
               begin
                 mem_last <= 1;
-                if (alu_op != ALU_MOV) set_flags16(result[16:0], orig[15:0]);
+                if (alu_op != ALU_MOV) set_flags16(result[16:0], orig[15:0], temp[15:0], alu_reverse_sign);
               end
             default:
               begin
                 mem_last <= 3;
-                if (alu_op != ALU_MOV) set_flags32(result, orig);
+                if (alu_op != ALU_MOV) set_flags32(result, orig, temp, alu_reverse_sign);
               end
           endcase
 
