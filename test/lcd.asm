@@ -69,6 +69,7 @@ start:
 main:
   call lcd_init
   call lcd_clear
+  ;call test_mul
 
 main_while_1:
   call delay
@@ -267,7 +268,7 @@ mandelbrot_for_count:
   ;; ti = ((zr * zi * 2);
   mov si, [ebx+zr]
   mov di, [ebx+zi]
-  call multiply_signed
+  ;call multiply_signed
   sal ax, 1
   mov [ebx+ti], ax
 
@@ -286,10 +287,10 @@ mandelbrot_for_count:
 mandelbrot_stop:
 
   mov edx, colors
-  ;mov eax, [edx+ecx*2]
-  mov eax, 0xf000
+  mov ax, [edx+ecx*2]
+  ;mov eax, 0xf000
 
-  ;call lcd_send_data
+  call lcd_send_data
 
   add word [ebx+curr_r], 0x0020
   sub word [ebx+curr_x], 1
@@ -298,14 +299,14 @@ mandelbrot_stop:
   add word [ebx+curr_i], 0x0020
   sub word [ebx+curr_y], 1
   jnz mandelbrot_for_y
+  ret
 
   ;; Test code.
+test_mul:
   ;mov edi, 0xfffe
-  ;mov esi, 4
+  ;mov esi, 0xffff
   ;call multiply_signed
   ;hlt
-
-  ret
 
 ;; lcd_send_cmd(al)
 lcd_send_cmd:
