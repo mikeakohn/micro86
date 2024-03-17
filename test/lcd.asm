@@ -165,7 +165,7 @@ multiply_skip_add:
   shl edi, 1
   cmp esi, 0
   jnz multiply_loop
-  ;sar eax, 10
+  sar eax, 10
   and eax, 0xffff
   ret
 
@@ -192,7 +192,7 @@ multiply_signed_skip_add:
   shl edi, 1
   cmp esi, 0
   jnz multiply_signed_loop
-  ;sar eax, 10
+  sar eax, 10
   and eax, 0xffff
   cmp ebp, 1
   jnz multiply_signed_exit
@@ -264,10 +264,11 @@ mandelbrot_for_count:
   sub ax, [ebx+zi2]
   mov [ebx+tr], ax
 
-  ;; ti = ((zr * zi) >> DEC_PLACE) << 1;
+  ;; ti = ((zr * zi * 2);
   mov si, [ebx+zr]
   mov di, [ebx+zi]
   call multiply_signed
+  sal ax, 1
   mov [ebx+ti], ax
 
   ;; zr = tr + curr_r;
