@@ -37,18 +37,18 @@ module memory_bus
   input  spi_miso_0
 );
 
+wire [7:0] ram0_data_out;
 wire [7:0] rom_data_out;
-wire [7:0] ram_data_out;
 wire [7:0] peripherals_data_out;
-wire [7:0] block_ram_data_out;
+wire [7:0] ram1_data_out;
 
-wire ram_write_enable;
+wire ram0_write_enable;
 wire peripherals_write_enable;
-wire block_ram_write_enable;
+wire ram1_write_enable;
 
-assign ram_write_enable = (address[15:14] == 2'b00) && write_enable;
+assign ram0_write_enable        = (address[15:14] == 2'b00) && write_enable;
 assign peripherals_write_enable = (address[15:14] == 2'b10) && write_enable;
-assign block_ram_write_enable = (address[15:14] == 2'b11) && write_enable;
+assign ram1_write_enable        = (address[15:14] == 2'b11) && write_enable;
 
 // FIXME: The RAM probably need an enable also.
 wire peripherals_enable;
@@ -57,21 +57,21 @@ assign peripherals_enable = (address[15:14] == 2'b10) && bus_enable;
 // Based on the selected bank of memory (address[15:14]) select if
 // memory should read from ram.v, rom.v, peripherals.v or hardcoded 0.
 assign data_out = address[15] == 0 ?
-  (address[14] == 0 ? ram_data_out         : rom_data_out) :
-  (address[14] == 0 ? peripherals_data_out : block_ram_data_out);
+  (address[14] == 0 ? ram0_data_out        : rom_data_out) :
+  (address[14] == 0 ? peripherals_data_out : ram1_data_out);
+
+ram ram_0(
+  .address      (address[11:0]),
+  .data_in      (data_in),
+  .data_out     (ram0_data_out),
+  .write_enable (ram0_write_enable),
+  .clk          (raw_clk)
+);
 
 rom rom_0(
   .address   (address[11:0]),
   .data_out  (rom_data_out),
   .clk       (raw_clk)
-);
-
-ram ram_0(
-  .address      (address[11:0]),
-  .data_in      (data_in),
-  .data_out     (ram_data_out),
-  .write_enable (ram_write_enable),
-  .clk          (raw_clk)
 );
 
 peripherals peripherals_0(
@@ -99,8 +99,8 @@ peripherals peripherals_0(
 ram ram_1(
   .address      (address[11:0]),
   .data_in      (data_in),
-  .data_out     (block_ram_data_out),
-  .write_enable (block_ram_write_enable),
+  .data_out     (ram1_data_out),
+  .write_enable (ram1_write_enable),
   .clk          (raw_clk),
 );
 

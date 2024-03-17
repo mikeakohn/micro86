@@ -808,13 +808,10 @@ end else
 
             if (alu_op == ALU_JMP) begin
               next_state <= STATE_CALL_0;
-              //state <= STATE_FETCH_EA_0;
             end else if (do_imm == 1) begin
               next_state <= STATE_ALU_IMM_TO_MEM_0;
-              //state <= STATE_FETCH_EA_0;
             end else begin
               next_state <= STATE_ALU_EXECUTE_0;
-              //state <= STATE_FETCH_EA_0;
             end
 
             state <= STATE_FETCH_EA_0;
