@@ -77,6 +77,10 @@ mem_test:
 	nasm -o rom.bin test/mem_test.asm
 	python3 tools/bin2txt.py rom.bin > rom.txt
 
+mem_test_ebp:
+	nasm -o rom.bin test/mem_test_ebp.asm
+	python3 tools/bin2txt.py rom.bin > rom.txt
+
 disasm:
 	ndisasm -b 32 rom.bin
 

@@ -323,10 +323,10 @@ always @(posedge clk) begin
           flag_carry <= 0;
           flag_sign <= 0;
           flag_parity <= 0;
-          mem_address <= 0;
           mem_write_enable <= 0;
-          mem_data_in <= 0;
-          instruction <= 0;
+          mem_bus_enable <= 0;
+          //mem_data_in <= 0;
+          //instruction <= 0;
           delay_loop <= 12000;
           eeprom_strobe <= 0;
           state <= STATE_DELAY_LOOP;
@@ -386,7 +386,7 @@ end else
             2'b00:
               begin
                 if (instruction[5:0] == 6'b001111) begin
-                  // 0xff prefix for long jump.
+                  // 0x0f prefix for long jump.
                   long_jmp <= 1;
                   mem_bus_enable <= 1;
                   mem_address <= rip;
@@ -722,7 +722,6 @@ end else
               begin
                 // One byte displacement.
                 // add eax, [ebx+80]:    0x03,0x43,0x50
-                // TODO:
                 // add eax, [esp+5]:     0x03,0x44,0x24,0x05
                 // add eax, [edx+ecx+5]: 0x03,0x44,0x0a,0x05
                 mem_last <= 0;
@@ -1079,7 +1078,7 @@ end else
               begin
                 if (mod_rm[7:6] == 1) begin
                   // 8 bit offset.
-                  mem_last <= 1;
+                  mem_last <= 0;
                   next_state = STATE_COMPUTE_SIB_EA_2;
                 end else begin
                   // 32 bit offset.
@@ -1225,8 +1224,6 @@ end else
             // call (1111 1111 : 11 010 reg) <- register indirect.
             rip <= temp;
 
-          //if (dst_reg == 3'b100) begin
-            // jmp register indirect (1111 1111 : 11 100 reg)
           if (is_call == 0) begin
             state <= STATE_FETCH_OP_0;
           end else begin
