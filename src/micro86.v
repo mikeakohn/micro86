@@ -181,6 +181,7 @@ always @(posedge raw_clk) begin
     //3'b010: begin column_value <= 4'b1011; leds_value <= ~mod_rm[7:0]; end
     //3'b010: begin column_value <= 4'b1011; leds_value <= ~ea[15:8]; end
     3'b010: begin column_value <= 4'b1011; leds_value <= ~registers[0][15:8]; end
+    //3'b010: begin column_value <= 4'b1011; leds_value <= ~rip[15:8]; end
     //3'b010: begin column_value <= 4'b1011; leds_value <= ~dst_reg; end
     //3'b010: begin column_value <= 4'b1011; leds_value <= ~mem_last; end
     //3'b010: begin column_value <= 4'b1011; leds_value <= ~temp[7:0]; end
@@ -586,7 +587,11 @@ end else
                     end
                   2'b11:
                     case (instruction[3:0])
-                      4'b0100: state <= STATE_HALTED;
+                      4'b0100:
+                        begin
+                          // hlt
+                          state <= STATE_HALTED;
+                        end
                       4'b0101:
                         begin
                           flag_carry <= ~flag_carry;
@@ -606,11 +611,13 @@ end else
 */
                       4'b0110:
                         begin
+                          // neg
                           alu_op <= ALU_NEG;
                           state <= STATE_FETCH_MOD_RM_0;
                         end
                       4'b0111:
                         begin
+                          // neg eax: 0xf7 0xd8
                           alu_op <= ALU_NEG;
                           state <= STATE_FETCH_MOD_RM_0;
                         end
@@ -850,6 +857,9 @@ end else
             endcase
           end
 
+          if (alu_op == ALU_NEG)
+            reverse_direction <= reverse_direction ^ 1;
+
           state <= STATE_ALU_EXECUTE_1;
         end
       STATE_ALU_EXECUTE_1:
@@ -1022,7 +1032,7 @@ end else
           mod_rm <= mem_data_out;
           rip <= rip + 1;
 
-          if (alu_op == ALU_NEG && mod_rm[5:4] == 3'b000) begin
+          if (alu_op == ALU_NEG && mem_data_out[5:3] == 3'b000) begin
             alu_op <= ALU_TEST;
             state <= STATE_TST_IMM32_0;
           end else if (alu_op == ALU_SHIFT) begin
