@@ -256,7 +256,8 @@ mandelbrot_for_count:
 
   ;; if (zr2 + zi2 > (4 << DEC_PLACE)) { break; }
   ;; cmp does: 4 - (zr2 + zi2).. if it's negative it's bigger than 4.
-  add ax, [ebx+zr2]
+  mov ax, [ebx+zr2]
+  add ax, [ebx+zi2]
   cmp ax, 4 << 10
   ja mandelbrot_stop
 
