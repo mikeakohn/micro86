@@ -507,17 +507,25 @@ end else
                       ea_has_no_reg <= 1;
                       dst_reg <= 0;
                       mem_count <= 0;
-                      mem_last <= 3;
                       state <= STATE_FETCH_DATA32_0;
                       next_state <= STATE_COMPUTE_EA_0;
 
                       if (instruction[3] == 0) begin
                         // mov eax, [0x4000]
                         alu_op <= ALU_MOV;
+                        mem_last <= 3;
                       end else begin
                         // test eax, 1: 0xa9,0x01,0x00,0x00,0x00
+                        alu_size[0] <= ~instruction[0];
                         alu_op <= ALU_TEST;
                         no_write_back <= 1;
+
+                        if (alu_size == 1)
+                          mem_last <= 0;
+                        else if (instruction[0])
+                          mem_last <= 3;
+                        else
+                          mem_last <= 1;
                       end
                     end
                   2'b11:
