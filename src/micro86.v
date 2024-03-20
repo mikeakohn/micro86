@@ -508,24 +508,28 @@ end else
                       dst_reg <= 0;
                       mem_count <= 0;
                       state <= STATE_FETCH_DATA32_0;
-                      next_state <= STATE_COMPUTE_EA_0;
 
                       if (instruction[3] == 0) begin
                         // mov eax, [0x4000]
                         alu_op <= ALU_MOV;
                         mem_last <= 3;
+                        next_state <= STATE_COMPUTE_EA_0;
                       end else begin
                         // test eax, 1: 0xa9,0x01,0x00,0x00,0x00
                         alu_size[0] <= ~instruction[0];
                         alu_op <= ALU_TEST;
                         no_write_back <= 1;
+                        is_reg_dest <= 1;
+                        //do_imm <= 1;
 
-                        if (alu_size == 1)
-                          mem_last <= 0;
-                        else if (instruction[0])
+                        next_state <= STATE_ALU_EXECUTE_0;
+
+                        if (alu_size[1] == 1)
+                          mem_last <= 1;
+                        else if (instruction[0] == 1)
                           mem_last <= 3;
                         else
-                          mem_last <= 1;
+                          mem_last <= 0;
                       end
                     end
                   2'b11:
@@ -946,20 +950,23 @@ end else
                     registers[dst_reg[1:0]][15:8] <= result[7:0];
                 end
 
-                if (alu_op != ALU_MOV) set_flags8(result[8:0], orig[7:0], temp[7:0], alu_reverse_sign);
+                if (alu_op != ALU_MOV)
+                  set_flags8(result[8:0], orig[7:0], temp[7:0], alu_reverse_sign);
               end
             2'b10:
               begin
                 if (no_write_back == 0)
                   registers[dst_reg][15:0] <= result[15:0];
 
-                if (alu_op != ALU_MOV == 0)
+                if (alu_op != ALU_MOV)
                   set_flags16(result[16:0], orig[15:0], temp[15:0], alu_reverse_sign);
               end
             default:
               begin
                 if (no_write_back == 0) registers[dst_reg] <= result;
-                if (alu_op != ALU_MOV) set_flags32(result, orig, temp, alu_reverse_sign);
+
+                if (alu_op != ALU_MOV)
+                  set_flags32(result, orig, temp, alu_reverse_sign);
               end
           endcase
 
