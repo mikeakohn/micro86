@@ -308,6 +308,14 @@ test_mul:
   ;call multiply_signed
   ;hlt
 
+error_1:
+  mov eax, esp
+  hlt
+
+error_2:
+  mov eax, 132
+  hlt
+
 ;; lcd_send_cmd(al)
 lcd_send_cmd:
   mov byte [SPI_IO], LCD_RES
