@@ -1295,10 +1295,11 @@ end else
               begin
                 // (jbe, jna / ja, jnbe)
                 // (cf == 1 or zf == 1) / (cf == 0 && zf == 0)
-                if (instruction[0] == 0)
+                if (instruction[0] == 0) begin
                   if (flag_carry == 1 || flag_zero == 1) rip <= temp;
-                else
+                end else begin
                   if (flag_carry == 0 && flag_zero == 0) rip <= temp;
+                end
               end
             3'h4:
               begin
@@ -1314,19 +1315,21 @@ end else
               begin
                 // (jl, jnge / jge, jnl)
                 // (sf <> of) / (sf == of)
-                if (instruction[0] == 0)
+                if (instruction[0] == 0) begin
                   if (flag_sign != flag_overflow) rip <= temp;
-                else
+                end else begin
                   if (flag_sign == flag_overflow) rip <= temp;
+                end
               end
             3'h7:
               begin
                 // (jle, jng / jg, jnle)
                 // (zf == 1 or sf <> of) / (zf == 0 and sf == of)
-                if (instruction[0] == 0)
+                if (instruction[0] == 0) begin
                   if (flag_zero == 1 || flag_sign != flag_overflow) rip <= temp;
-                else
+                end else begin
                   if (flag_zero == 0 && flag_sign == flag_overflow) rip <= temp;
+                end
               end
           endcase
 
