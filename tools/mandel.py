@@ -41,7 +41,6 @@ for y in range(0, 64):
   curr_r = 0xf800
 
   for x in range(0, 96):
-
     zr = curr_r
     zi = curr_i
 
@@ -49,7 +48,7 @@ for y in range(0, 64):
       zr2 = multiply_signed(zr, zr)
       zi2 = multiply_signed(zi, zi)
 
-      if zr2 + zi2 > (4 << 10): break
+      if (zr2 + zi2) > (4 << 10): break
 
       tr = (zr2 - zi2) & 0xffff
       ti = (multiply_signed(zr, zi) << 1) & 0xffff
@@ -59,10 +58,10 @@ for y in range(0, 64):
 
     print(pixels[c], end="")
     #print(c, end="")
-    curr_r += 0x0020
+    curr_r = (curr_r + 0x0020) & 0xffff
 
   print("")
-  curr_i += 0x0020
+  curr_i = (curr_i + 0x0020) & 0xffff
 
 print("%04x" % multiply_signed(0xfc00, 0xf800))
 
