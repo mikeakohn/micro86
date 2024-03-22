@@ -624,12 +624,16 @@ end else
                       4'b0110:
                         begin
                           // neg
+                          alu_size[0] = 1;
                           alu_op <= ALU_NEG;
                           state <= STATE_FETCH_MOD_RM_0;
                         end
                       4'b0111:
                         begin
-                          // neg eax: 0xf7 0xd8
+                          // neg eax:          0xf7 0xd8
+                          //                          d8 = 11 011 reg (reg = 3)
+                          // test edi, 0x8000: 0xf7,0xc7,0x00,0x80,0x00,0x00
+                          //                          c7 = 11 000 111 (reg = 0)
                           alu_op <= ALU_NEG;
                           state <= STATE_FETCH_MOD_RM_0;
                         end
@@ -1356,7 +1360,15 @@ end else
           dst_reg <= mod_rm[2:0];
           dest_value <= registers[mod_rm[2:0]];
           mem_count <= 0;
-          mem_last <= 3;
+          do_imm <= 1;
+          is_reg_dest <= 1;
+          no_write_back <= 1;
+
+          case (alu_size)
+            2'b01: mem_last <= 0;
+            2'b10: mem_last <= 1;
+            default: mem_last <= 3;
+          endcase
           state <= STATE_FETCH_DATA32_0;
           next_state <= STATE_ALU_EXECUTE_1;
         end
