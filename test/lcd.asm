@@ -244,13 +244,13 @@ mandelbrot_for_x:
 mandelbrot_for_count:
   ;; zr2 = (zr * zr) >> DEC_PLACE;
   mov si, [ebx+zr]
-  mov di, [ebx+zr]
+  mov di, si
   call multiply_signed
   mov [ebx+zr2], ax
 
   ;; zi2 = (zi * zi) >> DEC_PLACE;
   mov si, [ebx+zi]
-  mov di, [ebx+zi]
+  mov di, si
   call multiply_signed
   mov [ebx+zi2], ax
 
@@ -310,12 +310,12 @@ test_mul:
   ;hlt
 
 error_1:
-  mov eax, esp
-  hlt
+  ;mov eax, esp
+  ;hlt
 
 error_2:
-  mov eax, 132
-  hlt
+  ;mov eax, 132
+  ;hlt
 
 ;; lcd_send_cmd(al)
 lcd_send_cmd:
