@@ -27,7 +27,7 @@ module peripherals
   input reset,
   output spi_clk_0,
   output spi_mosi_0,
-  input  spi_miso_0,
+  input  spi_miso_0
 );
 
 reg [7:0] storage [3:0];
