@@ -1118,20 +1118,20 @@ end else
                 if (mod_rm[7:6] == 1) begin
                   // 8 bit offset.
                   mem_last <= 0;
-                  next_state = STATE_COMPUTE_SIB_EA_2;
+                  next_state <= STATE_COMPUTE_SIB_EA_2;
                 end else begin
                   // 32 bit offset.
                   mem_last <= 3;
-                  next_state = STATE_COMPUTE_SIB_EA_3;
+                  next_state <= STATE_COMPUTE_SIB_EA_3;
                 end
 
-                state = STATE_FETCH_DATA32_0;
+                state <= STATE_FETCH_DATA32_0;
               end
           endcase
         end
       STATE_COMPUTE_SIB_EA_2:
         begin
-          ea <= $signed(ea) + $signed(temp[0:7]);
+          ea <= $signed(ea) + $signed(temp[7:0]);
           state <= STATE_COMPUTE_EA_1;
         end
       STATE_COMPUTE_SIB_EA_3:
