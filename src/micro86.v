@@ -276,36 +276,46 @@ parameter SHIFT_SHR = 5;
 parameter SHIFT_SAR = 7;
 
 task set_flags16_nocf(input [16:0] value, input [15:0] old, input [15:0] src, input alu_reverse_sign);
-  flag_overflow <= old[7] == (src[7] ^ alu_reverse_sign) && value[7] != old[7];
-  flag_zero <= value[15:0] == 0;
-  flag_sign <= value[15];
+  begin
+    flag_overflow <= old[7] == (src[7] ^ alu_reverse_sign) && value[7] != old[7];
+    flag_zero <= value[15:0] == 0;
+    flag_sign <= value[15];
+  end
 endtask
 
 task set_flags32_nocf(input [32:0] value, input [31:0] old, input [31:0] src, input alu_reverse_sign);
-  flag_overflow <= old[31] == (src[31] ^ alu_reverse_sign) && value[31] != old[31];
-  flag_zero <= value[31:0] == 0;
-  flag_sign <= value[32];
+  begin
+    flag_overflow <= old[31] == (src[31] ^ alu_reverse_sign) && value[31] != old[31];
+    flag_zero <= value[31:0] == 0;
+    flag_sign <= value[32];
+  end
 endtask
 
 task set_flags8(input [8:0] value, input [7:0] old, input [7:0] src, input alu_reverse_sign);
-  flag_overflow <= old[7] == (src[7] ^ alu_reverse_sign) && value[7] != old[7];
-  flag_zero <= value[7:0] == 0;
-  flag_sign <= value[7];
-  flag_carry <= value[8];
+  begin
+    flag_overflow <= old[7] == (src[7] ^ alu_reverse_sign) && value[7] != old[7];
+    flag_zero <= value[7:0] == 0;
+    flag_sign <= value[7];
+    flag_carry <= value[8];
+  end
 endtask
 
 task set_flags16(input [16:0] value, input [15:0] old, input [15:0] src, input alu_reverse_sign);
-  flag_overflow <= old[15] == (src[15] ^ alu_reverse_sign) && value[15] != old[15];
-  flag_zero <= value[15:0] == 0;
-  flag_sign <= value[15];
-  flag_carry <= value[16];
+  begin
+    flag_overflow <= old[15] == (src[15] ^ alu_reverse_sign) && value[15] != old[15];
+    flag_zero <= value[15:0] == 0;
+    flag_sign <= value[15];
+    flag_carry <= value[16];
+  end
 endtask
 
 task set_flags32(input [32:0] value, input [31:0] old, input [31:0] src, input alu_reverse_sign);
-  flag_overflow <= old[31] == (src[31] ^ alu_reverse_sign) && value[31] != old[31];
-  flag_zero <= value[31:0] == 0;
-  flag_sign <= value[31];
-  flag_carry <= value[32];
+  begin
+    flag_overflow <= old[31] == (src[31] ^ alu_reverse_sign) && value[31] != old[31];
+    flag_zero <= value[31:0] == 0;
+    flag_sign <= value[31];
+    flag_carry <= value[32];
+  end
 endtask
 
 // This block is the main CPU instruction execute state machine.
