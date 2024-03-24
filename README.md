@@ -63,23 +63,7 @@ others missing here.
     xor
     test
 
-Unsupported addressing modes (This should work now, haven't tested fully):
-
-    // lea eax, [ebp+ecx*4]: 0x8d,0x44,0x8d,0x00
-    // lea eax, [ebp+ecx*4+100]: 0x8d,0x44,0x8d,0x64
-    // lea eax, [ebp+ecx*4+128]: 0x8d,0x84,0x8d,0x80,0x00,0x00,0x00
-    // lea eax, [ebx+ecx*4+100]: 0x8d,0x44,0x8b,0x64
-
-Looks like ebp is kind of special due to the weird x86 instruction
-encodings. This would actually be pretty easy to implement, but
-this design is running out of LUTs. Trying to keep it under 4200
-to target a smaller FPGA.
-
-Shifted out bits on the shift instructions also won't correctly
-compute the carry flag if the shift is more than 1 bit. This can
-be corrected later after branching the code for a smaller FPGA.
-
-Shifts also only work on registers.
+Shifts only work directly on registers.
 
 Memory Map
 ==========
@@ -99,6 +83,10 @@ button needs to be held down while the chip is resetting.
 The peripherals area contain the following:
 
 * 0x8000: input from push button
+* 0x8001: SPI TX
+* 0x8002: SPI RX
+* 0x8003: SPI CTRL
 * 0x8008: ioport0 output (in my test case only 1 pin is connected)
 * 0x8009: MIDI note value (60-96) to play a tone on the speaker or 0 to stop
+* 0x800a: iport1
 
