@@ -152,7 +152,7 @@ assign flags[1] = 0;
 assign flags[0] = flag_carry;
 
 // Eeprom.
-reg  [8:0] eeprom_count;
+reg [11:0] eeprom_count;
 wire [7:0] eeprom_data_out;
 reg [10:0] eeprom_address;
 reg eeprom_strobe = 0;
@@ -1590,7 +1590,6 @@ end else
         end
       STATE_ERROR:
         begin
-          //registers[0] <= error_code;
           state <= STATE_ERROR;
         end
       STATE_EEPROM_START:
@@ -1604,9 +1603,8 @@ end else
       STATE_EEPROM_READ:
         begin
           // Set the next EEPROM address to read from and strobe.
+          mem_bus_enable <= 0;
           eeprom_address <= eeprom_count;
-          mem_bus_enable <= 1;
-          mem_address <= eeprom_count;
           eeprom_strobe <= 1;
           state <= STATE_EEPROM_WAIT;
         end
@@ -1616,7 +1614,7 @@ end else
           eeprom_strobe <= 0;
 
           if (eeprom_ready) begin
-            mem_bus_enable <= 0;
+            mem_address <= eeprom_count;
             mem_data_in <= eeprom_data_out;
             eeprom_count <= eeprom_count + 1;
             state <= STATE_EEPROM_WRITE;
@@ -1635,7 +1633,8 @@ end else
           mem_bus_enable <= 0;
           mem_write_enable <= 0;
 
-          if (eeprom_count == 256)
+          // eeprom_count is 12 bit, so when it overflows it's done.
+          if (eeprom_count == 0)
             state <= STATE_FETCH_OP_0;
           else
             state <= STATE_EEPROM_READ;

@@ -25,6 +25,10 @@ lcd:
 	nasm -o rom.bin test/lcd.asm
 	python3 tools/bin2txt.py rom.bin > rom.txt
 
+music:
+	nasm -o rom.bin test/music.asm
+	python3 tools/bin2txt.py rom.bin > rom.txt
+
 memory:
 	nasm -o rom.bin test/memory_access.asm
 	python3 tools/bin2txt.py rom.bin > rom.txt
