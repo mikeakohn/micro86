@@ -2,12 +2,14 @@
 IO_LOC "raw_clk" 4;
 CLOCK_LOC "raw_clk" BUFG;
 
-//IO_LOC "leds[0]" 15;
-//IO_LOC "leds[1]" 16;
-//IO_LOC "leds[2]" 17;
-//IO_LOC "leds[3]" 18;
-//IO_LOC "leds[4]" 19;
-//IO_LOC "leds[5]" 20;
+IO_LOC "leds[0]" 15;
+IO_LOC "leds[1]" 16;
+IO_LOC "leds[2]" 17;
+IO_LOC "leds[3]" 18;
+IO_LOC "leds[4]" 19;
+IO_LOC "leds[5]" 20;
+IO_LOC "leds[6]" 31;
+IO_LOC "leds[7]" 30;
 
 // GPIO.
 IO_LOC "ioport_0"  73;
@@ -17,10 +19,10 @@ IO_LOC "ioport_3"  85;
 IO_LOC "ioport_4"  77;
 
 // eeporm.
-IO_LOC "eeprom_cs"  15;
-IO_LOC "eeprom_clk" 16;
-IO_LOC "eeprom_di"  18;
-IO_LOC "eeprom_do"  19;
+IO_LOC "eeprom_cs"  27;
+IO_LOC "eeprom_clk" 28;
+IO_LOC "eeprom_di"  29;
+IO_LOC "eeprom_do"  32;
 
 //SPI peripheral 0.
 //IO_LOC "spi_cs_0" 76;
@@ -42,7 +44,8 @@ IO_LOC "uart_rx_0" 71;
 IO_LOC "speaker_p" 56;
 IO_LOC "speaker_m" 54;
 
-// Buttons.
+// Buttons. Note that IceFun has reverse logic on the buttons while
+// Tang Nano is a 1 when the button is pushed and 0 when released.
 IO_LOC "button_reset"          87;
 IO_LOC "button_halt"           88;
 IO_LOC "button_program_select" 53;
