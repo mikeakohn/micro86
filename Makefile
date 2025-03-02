@@ -14,6 +14,19 @@ default:
 	nextpnr-ice40 -r --hx8k --json $(PROGRAM).json --package cb132 --asc $(PROGRAM).asc --opt-timing --pcf icefun.pcf
 	icepack $(PROGRAM).asc $(PROGRAM).bin
 
+tang_nano:
+	yosys -q \
+	  -D TANG_NANO \
+	  -p "read_verilog $(SOURCE); synth_gowin -json $(PROGRAM).json -family gw2a"
+	nextpnr-himbaechel -r \
+	  --json $(PROGRAM).json \
+	  --write $(PROGRAM)_pnr.json \
+	  --freq 27 \
+	  --vopt family=GW2A-18C \
+	  --vopt cst=tangnano20k.cst \
+	  --device GW2AR-LV18QN88C8/I7
+	gowin_pack -d GW2A-18C -o $(PROGRAM).fs $(PROGRAM)_pnr.json
+
 program:
 	iceFUNprog $(PROGRAM).bin
 
